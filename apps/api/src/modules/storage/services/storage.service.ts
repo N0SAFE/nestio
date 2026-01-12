@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
-import type { StorageConfig } from '@/config/storage/storage.config';
+import type { ApiEnv } from '@repo/env';
 import type {
   BucketInfo,
   ObjectInfo,
@@ -28,28 +28,34 @@ import type {
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private minioClient: Minio.Client;
-  private readonly config: StorageConfig;
 
-  constructor(private readonly configService: ConfigService) {
-    this.config = this.configService.get<StorageConfig>('storage')!;
-  }
+  constructor(private readonly configService: ConfigService<ApiEnv, true>) {}
 
   async onModuleInit() {
     try {
-      // Parse endpoint to extract host and port
-      const url = new URL(this.config.endpoint);
-      const endPoint = url.hostname;
-      const port = this.config.port || parseInt(url.port) || (this.config.useSSL ? 443 : 80);
+      const endpoint = this.configService.get('MINIO_ENDPOINT', { infer: true });
+      const port = this.configService.get('MINIO_PORT', { infer: true });
+      const useSSL = this.configService.get('MINIO_USE_SSL', { infer: true });
+      const accessKey = this.configService.get('MINIO_ACCESS_KEY', { infer: true }) || 
+                        this.configService.get('MINIO_ROOT_USER', { infer: true });
+      const secretKey = this.configService.get('MINIO_SECRET_KEY', { infer: true }) || 
+                        this.configService.get('MINIO_ROOT_PASSWORD', { infer: true });
+      const region = this.configService.get('STORAGE_REGION', { infer: true });
 
-      this.logger.log(`Initializing MinIO client with endpoint: ${endPoint}:${port}`);
+      // Parse endpoint to extract host and port
+      const url = new URL(endpoint);
+      const endPoint = url.hostname;
+      const finalPort = port || parseInt(url.port) || (useSSL ? 443 : 80);
+
+      this.logger.log(`Initializing MinIO client with endpoint: ${endPoint}:${finalPort}`);
 
       this.minioClient = new Minio.Client({
         endPoint,
-        port,
-        useSSL: this.config.useSSL,
-        accessKey: this.config.accessKey,
-        secretKey: this.config.secretKey,
-        region: this.config.region,
+        port: finalPort,
+        useSSL,
+        accessKey,
+        secretKey,
+        region,
       });
 
       this.logger.log('MinIO client initialized successfully');
