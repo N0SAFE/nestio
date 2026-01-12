@@ -47,6 +47,16 @@ export const apiEnvSchema = zod.object({
     TRUSTED_ORIGINS: zod.string().optional(),
     ENABLE_MASTER_TOKEN: zod.coerce.boolean().default(false),
     
+    // MinIO/S3 Object Storage
+    MINIO_ENDPOINT: zod.string().default('http://minio-dev:9000'),
+    MINIO_PORT: zod.coerce.number().int().min(1).max(65535).default(9000),
+    MINIO_USE_SSL: zod.coerce.boolean().default(false),
+    MINIO_ACCESS_KEY: zod.string().optional(),
+    MINIO_SECRET_KEY: zod.string().optional(),
+    MINIO_ROOT_USER: zod.string().default('minioadmin'),
+    MINIO_ROOT_PASSWORD: zod.string().default('minioadmin'),
+    STORAGE_REGION: zod.string().default('us-east-1'),
+    
     // Shared
     ...sharedEnvVars,
 }).refine((data) => {

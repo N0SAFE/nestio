@@ -135,6 +135,10 @@
                 "magicast": "^0.5.1",
                 "type-fest": "^5.2.0"
             },
+            "storage": {
+                "minio": "^8.0.2",
+                "@types/minio": "^7.1.1"
+            },
             "database": {
                 "drizzle-orm": "^0.44.7",
                 "drizzle-kit": "^0.31.6",
