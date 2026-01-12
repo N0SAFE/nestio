@@ -61,7 +61,7 @@
         "eslint-plugin-react": "^7.34.2",
         "eslint-plugin-react-hooks": "^7.0.1",
         "eslint-plugin-react-refresh": "^0.4.7",
-        "globals": "^16.4.0",
+        "globals": "^17.0.0",
         "tailwindcss": "^4.1.16",
         "typescript": "catalog:build",
         "typescript-eslint": "^8.15.0",
