@@ -1,0 +1,37 @@
+{
+  "name": "doc",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build --turbopack",
+    "compile": "next build --experimental-build-mode=compile --turbopack --debug-prerender",
+    "dev": "next dev -p 3020",
+    "start": "next start -p 3020",
+    "postinstall": "fumadocs-mdx",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fumadocs-core": "catalog:doc",
+    "fumadocs-mdx": "catalog:doc",
+    "fumadocs-ui": "catalog:doc",
+    "lucide-react": "catalog:ui",
+    "next": "catalog:next",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@repo-configs/eslint": "*",
+    "@tailwindcss/postcss": "catalog:styling",
+    "@types/mdx": "catalog:doc",
+    "@types/node": "catalog:build",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "postcss": "catalog:styling",
+    "tailwindcss": "catalog:styling",
+    "typescript": "catalog:build",
+    "eslint-config-next": "catalog:next",
+    "eslint": "catalog:linting",
+    "@eslint/eslintrc": "catalog:linting"
+  }
+}

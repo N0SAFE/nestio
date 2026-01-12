@@ -1,0 +1,39 @@
+{
+    "name": "@repo-configs/prettier",
+    "version": "1.0.0",
+    "main": "dist/cjs/base.js",
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/esm/base.js",
+            "require": "./dist/cjs/base.js"
+        },
+        "./base": {
+            "import": "./dist/esm/base.js",
+            "require": "./dist/cjs/base.js"
+        },
+        "./tailwind": {
+            "import": "./dist/esm/tailwind.js",
+            "require": "./dist/cjs/tailwind.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "bun scripts/build.ts",
+        "compile": "bun x cross-env COMPILE_MODE=true bun run build",
+        "clean": "rimraf dist",
+        "type-check": "tsc --noEmit"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "@repo-configs/vitest": "*",
+        "prettier": "catalog:linting",
+        "prettier-plugin-tailwindcss": "catalog:linting",
+        "vitest": "catalog:testing"
+    }
+}

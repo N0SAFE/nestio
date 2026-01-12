@@ -1,0 +1,46 @@
+{
+    "name": "@repo/types",
+    "version": "1.0.0",
+    "exports": {
+        "./*": {
+            "import": {
+                "types": "./*.ts"
+            },
+            "require": {
+                "types": "./*.ts"
+            }
+        }
+    },
+    "scripts": {
+        "lint": "eslint \"**/*.ts*\"",
+        "type-check": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
+    },
+    "devDependencies": {
+        "eslint": "catalog:linting",
+        "@eslint/eslintrc": "^3.3.3",
+        "@eslint/js": "^9.8.0",
+        "@repo-configs/eslint": "*",
+        "@repo-configs/prettier": "*",
+        "@repo-configs/typescript": "*",
+        "@repo-configs/vitest": "*",
+        "typescript": "catalog:build",
+        "vitest": "catalog:testing",
+        "zod": "catalog:utils",
+        "drizzle-orm": "catalog:database"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "concurrently": "^9.2.1",
+        "rimraf": "catalog:build"
+    },
+    "peerDependencies": {
+        "concurrently": "^9.2.1",
+        "rimraf": "catalog:build"
+    }
+}
