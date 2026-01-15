@@ -17,7 +17,7 @@ import {
   createSearchConfigSchema,
 } from "../query/search";
 import { 
-  createQueryBuilder, 
+  createQueryBuilder,
   type QueryConfig,
   type ComputeInputSchema,
   type ComputeOutputSchema,
@@ -80,6 +80,7 @@ type _DefaultListQueryConfig = {
  * Default input schema type for list() when called without options
  * Matches ComputeInputSchema<DefaultListQueryConfig>
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type DefaultListInputSchema = {
   limit: number;
   offset: number;
@@ -88,6 +89,7 @@ type DefaultListInputSchema = {
 /**
  * Default output schema type for list() when called without options
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type DefaultListOutputSchema<TData> = {
   data: TData[];
   meta: {
