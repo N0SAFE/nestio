@@ -73,6 +73,7 @@ async function runBuild(): Promise<void> {
       "class-transformer",
       "@nestjs/microservices",
       "@nestjs/platform-socket.io",
+      "@nestjs/websockets",
     ]
   } as BuildConfig
 
@@ -98,6 +99,7 @@ async function runBuild(): Promise<void> {
       "class-transformer",
       "@nestjs/microservices",
       "@nestjs/platform-socket.io",
+      "@nestjs/websockets",
     ]
   } as BuildConfig
 
