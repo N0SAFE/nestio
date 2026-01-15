@@ -14,9 +14,12 @@ export class ContextPlugin<
   // Order controls plugin loading order (higher = loads earlier)
   order = 100;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
   init(link: StandardLinkOptions<T>): void {}
 }
 
-export default {
+const contextPluginDefault = {
   ContextPlugin,
 };
+
+export default contextPluginDefault;

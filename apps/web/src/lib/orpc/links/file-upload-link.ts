@@ -9,13 +9,13 @@
  */
 
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
-import type { ContractRouter } from "@orpc/contract";
-import type { ClientContext, ClientOptions, NestedClient, Client } from "@orpc/client";
+import type { ContractRouter, Meta } from "@orpc/contract";
+import type { ClientContext, NestedClient, Client } from "@orpc/client";
 
 /**
  * Progress event for file uploads
  */
-export type FileUploadProgressEvent = {
+export interface FileUploadProgressEvent {
   loaded: number;
   total: number;
   percentage: number;
@@ -26,7 +26,7 @@ export type FileUploadProgressEvent = {
  * Context extension for file upload routes
  * This is merged with the existing ORPC context type
  */
-export type FileUploadContext = {
+export interface FileUploadContext {
   onProgress?: (event: FileUploadProgressEvent) => void;
 }
 
@@ -90,7 +90,7 @@ class UploadRegistry {
 
   private notify() {
     const uploads = this.getAllUploads();
-    this.listeners.forEach(listener => listener(uploads));
+    this.listeners.forEach(listener => {listener(uploads)});
   }
 }
 
@@ -281,9 +281,7 @@ function createUploadWorker(): Worker {
 let sharedWorker: Worker | null = null;
 
 function getUploadWorker(): Worker {
-  if (!sharedWorker) {
-    sharedWorker = createUploadWorker();
-  }
+  sharedWorker ??= createUploadWorker();
   return sharedWorker;
 }
 
@@ -292,13 +290,13 @@ function getUploadWorker(): Worker {
  * Returns a Response with streaming body created from MessageChannel
  */
 function uploadWithWorker(
-  input: Record<string, any>,
+  input: Record<string, unknown>,
   endpoint: string,
   onProgress?: (event: { loaded: number; total: number; percentage: number }) => void
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
     const worker = getUploadWorker();
-    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const uploadId = `upload_${String(Date.now())}_${Math.random().toString(36).substring(2, 11)}`;
     
     // Extract file info for tracking
     let fileName = 'unknown';
@@ -329,7 +327,11 @@ function uploadWithWorker(
     // Create ReadableStream controlled by worker messages
     const stream = new ReadableStream({
       start(controller) {
-        channel.port1.onmessage = (e) => {
+        channel.port1.onmessage = (e: MessageEvent<{
+          type: string; 
+          data: ArrayBuffer;
+          error?: string;
+        }>) => {
           const { type, data, error } = e.data;
 
           if (type === 'chunk') {
@@ -359,7 +361,15 @@ function uploadWithWorker(
     });
 
     // Listen to worker messages
-    const messageHandler = (e: MessageEvent) => {
+    const messageHandler = (e: MessageEvent<{
+      type: string;
+      uploadId: string;
+      progress: { loaded: number; total: number; percentage: number };
+      status: number;
+      statusText: string;
+      contentType: string;
+      error: string;
+    }>) => {
       const { type, uploadId: msgUploadId, progress, status, statusText, contentType, error } = e.data;
 
       // Only handle messages for this upload
@@ -370,7 +380,7 @@ function uploadWithWorker(
       } else if (type === 'progress') {
         uploadRegistry.updateUpload(uploadId, { progress });
         if (onProgress) {
-          console.log(`[FileUploadLink] Upload progress: ${progress.percentage}%`);
+          console.log(`[FileUploadLink] Upload progress: ${String(progress.percentage)}%`);
           onProgress(progress);
         }
       } else if (type === 'responseStart') {
@@ -426,7 +436,7 @@ function uploadWithWorker(
 /**
  * Check if input contains File objects
  */
-function containsFile(input: any): boolean {
+function containsFile(input: unknown): boolean {
   if (!input || typeof input !== 'object') return false;
 
   if (input instanceof File) return true;
@@ -445,7 +455,7 @@ function containsFile(input: any): boolean {
  */
 type HasFileInType<T> = T extends File
   ? true
-  : T extends Array<infer Element>
+  : T extends (infer Element)[]
     ? HasFileInType<Element>
     : T extends object
       ? keyof T extends never
@@ -459,13 +469,13 @@ type HasFileInType<T> = T extends File
  * Transform a client type to extend context with FileUploadContext ONLY for routes with files
  * Routes without files will NOT have FileUploadContext in their type
  */
-export type WithFileUploadsClient<T extends NestedClient<any>> = 
+export type WithFileUploadsClient<T extends NestedClient<ClientContext>> = 
   T extends Client<infer UContext, infer UInput, infer UOutput, infer UError>
     ? HasFileInType<UInput> extends true
       ? Client<UContext & FileUploadContext, UInput, UOutput, UError>
       : Client<UContext, UInput, UOutput, UError>
     : {
-        [K in keyof T]: T[K] extends NestedClient<any> 
+        [K in keyof T]: T[K] extends NestedClient<ClientContext> 
           ? WithFileUploadsClient<T[K]>
           : T[K]
       }
@@ -475,7 +485,7 @@ export type WithFileUploadsClient<T extends NestedClient<any>> =
  */
 export class FileUploadOpenAPILink<TContext extends ClientContext> extends OpenAPILink<TContext> {
   constructor(
-    contract: ContractRouter<any>,
+    contract: ContractRouter<Meta>,
     options: ConstructorParameters<typeof OpenAPILink<TContext>>[1]
   ) {
     // Store original fetch function
@@ -492,7 +502,7 @@ export class FileUploadOpenAPILink<TContext extends ClientContext> extends OpenA
       const isFileUpload = containsFile(input);
 
       // Get onProgress callback from context
-      const onProgress = linkOptions?.context?.onProgress as ((event: { loaded: number; total: number; percentage: number }) => void) | undefined;
+      const onProgress = linkOptions.context.onProgress as ((event: { loaded: number; total: number; percentage: number }) => void) | undefined;
 
       // Only use XMLHttpRequest if:
       // 1. It's a file upload (multipart/form-data)
@@ -503,7 +513,7 @@ export class FileUploadOpenAPILink<TContext extends ClientContext> extends OpenA
 
         try {
           // Input already contains the data with File objects
-          const inputData = input as Record<string, any>;
+          const inputData = input as Record<string, unknown>;
 
           // Use Web Worker with XMLHttpRequest for upload with progress
           // uploadWithWorker returns a Response with streaming body from MessageChannel

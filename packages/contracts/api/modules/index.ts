@@ -3,3 +3,4 @@ export * from './health';
 export * from './push';
 export * from './test';
 export * from './storage';
+export * from './organization';

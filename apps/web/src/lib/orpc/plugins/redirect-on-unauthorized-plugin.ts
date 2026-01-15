@@ -38,9 +38,9 @@ export class RedirectOnUnauthorizedPlugin<
 
     init(link: StandardLinkOptions<T>): void {
         // Add error interceptor to handle 401 responses
-        link.interceptors = link.interceptors || []
+        link.interceptors = link.interceptors ?? []
         
-        link.interceptors.push(async (interceptorOptions: any) => {
+        link.interceptors.push(async (interceptorOptions) => {
             try {
                 return await interceptorOptions.next(interceptorOptions)
             } catch (error) {
@@ -56,7 +56,7 @@ export class RedirectOnUnauthorizedPlugin<
                 }
 
                 // Check if redirect is disabled for this request
-                if (interceptorOptions.context?.noRedirectOnUnauthorized) {
+                if (interceptorOptions.context.noRedirectOnUnauthorized) {
                     throw error
                 }
 
@@ -101,10 +101,12 @@ export class RedirectOnUnauthorizedPlugin<
  * })
  * ```
  */
-export function createRedirectOnUnauthorizedPlugin(): RedirectOnUnauthorizedPlugin<any> {
+export function createRedirectOnUnauthorizedPlugin() {
     return new RedirectOnUnauthorizedPlugin()
 }
 
-export default {
+const redirectPluginDefault = {
     RedirectOnUnauthorizedPlugin,
 }
+
+export default redirectPluginDefault

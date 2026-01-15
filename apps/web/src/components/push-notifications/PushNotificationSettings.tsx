@@ -258,7 +258,7 @@ export function PushNotificationSettings() {
               <div className="mt-4">
                 <p className="text-sm font-medium mb-2">Your Devices</p>
                 <ul className="space-y-1">
-                  {push.stats.data.devices.map((device: any, index: number) => (
+                  {push.stats.data.devices.map((device, index) => (
                     <li key={index} className="text-sm text-muted-foreground">
                       {device.deviceName} - Last used:{' '}
                       {new Date(device.lastUsed).toLocaleDateString()}

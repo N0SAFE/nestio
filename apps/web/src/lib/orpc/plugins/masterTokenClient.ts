@@ -1,7 +1,7 @@
 import { authClient } from '../../auth'
+import { parseCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 import { StandardLinkOptions, StandardLinkPlugin } from '@orpc/client/standard'
 import { hasMasterTokenPlugin } from '@repo/auth/client'
-import { parseCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 /**
  * Master Token Plugin for ORPC Client

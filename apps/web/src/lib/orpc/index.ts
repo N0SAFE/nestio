@@ -1,4 +1,4 @@
-import { ClientLink, createORPCClient, InferClientContext } from "@orpc/client";
+import { createORPCClient } from "@orpc/client";
 import {
   type AppContract,
   appContract,
@@ -12,6 +12,7 @@ import { CookieHeadersPlugin } from "./plugins/cookie-headers-plugin";
 import { RedirectOnUnauthorizedPlugin } from "./plugins/redirect-on-unauthorized-plugin";
 import { StandardLinkPlugin } from "@orpc/client/standard";
 import { FileUploadOpenAPILink, WithFileUploadsClient } from "./links/file-upload-link";
+import { addCacheOperations } from "@/domains/shared/cache-operations";
 
 const Plugins = [
   new CookieHeadersPlugin(),
@@ -74,8 +75,15 @@ export function createORPCClientWithCookies() {
 // File upload progress tracking is now handled at the Link level (FileUploadOpenAPILink)
 // This is the correct ORPC architecture pattern
 // The WithFileUploadsClient type transformation ensures onProgress is available in context
-export const orpc = createTanstackQueryUtils(
-  createORPCClientWithCookies(),
-);
+const client = createORPCClientWithCookies();
+
+const baseOrpc = createTanstackQueryUtils(client);
+
+// Enhance with cache operations for type-safe cache manipulation
+// This adds .cache property to all query endpoints with get/set/update/invalidate/remove methods
+export const orpc = addCacheOperations(baseOrpc);
+
+// Export appContract for type checking and testing
+export { appContract };
 
 export type Context = PluginsContext;

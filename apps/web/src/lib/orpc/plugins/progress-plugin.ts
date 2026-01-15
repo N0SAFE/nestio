@@ -380,6 +380,8 @@ export function createProgressPlugin() {
   return new ProgressPlugin();
 }
 
-export default {
+const progressPluginDefault = {
   ProgressPlugin,
 };
+
+export default progressPluginDefault;
