@@ -18,5 +18,5 @@ export const bucketCreateContract = oc
   )
   .output(bucketSchema);
 
-export type BucketCreateInput = z.infer<typeof bucketCreateContract.InputSchema>;
-export type BucketCreateOutput = z.infer<typeof bucketCreateContract.OutputSchema>;
+export type BucketCreateInput = z.infer<typeof bucketCreateContract['~orpc']['inputSchema']>;
+export type BucketCreateOutput = z.infer<typeof bucketCreateContract['~orpc']['outputSchema']>;

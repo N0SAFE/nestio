@@ -14,7 +14,7 @@ export const objectSchema = z.object({
   etag: z.string(),
   lastModified: z.iso.datetime(),
   contentType: z.string().optional(),
-  metadata: z.record(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 
 // Object list result schema

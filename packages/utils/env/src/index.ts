@@ -47,15 +47,10 @@ export const apiEnvSchema = zod.object({
     TRUSTED_ORIGINS: zod.string().optional(),
     ENABLE_MASTER_TOKEN: zod.coerce.boolean().default(false),
     
-    // MinIO/S3 Object Storage
-    MINIO_ENDPOINT: zod.string().default('http://minio-dev:9000'),
-    MINIO_PORT: zod.coerce.number().int().min(1).max(65535).default(9000),
-    MINIO_USE_SSL: zod.coerce.boolean().default(false),
-    MINIO_ACCESS_KEY: zod.string().optional(),
-    MINIO_SECRET_KEY: zod.string().optional(),
-    MINIO_ROOT_USER: zod.string().default('minioadmin'),
-    MINIO_ROOT_PASSWORD: zod.string().default('minioadmin'),
-    STORAGE_REGION: zod.string().default('us-east-1'),
+    // Custom S3-Compatible Object Storage
+    STORAGE_ROOT_PATH: zod.string().default('/app/storage/buckets'),
+    STORAGE_MAX_FILE_SIZE: zod.coerce.number().int().default(5368709120), // 5GB (S3 limit)
+    STORAGE_MULTIPART_THRESHOLD: zod.coerce.number().int().default(104857600), // 100MB
     
     // Shared
     ...sharedEnvVars,

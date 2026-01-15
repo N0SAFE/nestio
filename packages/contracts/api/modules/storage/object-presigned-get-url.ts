@@ -5,7 +5,7 @@ import { oc } from "@orpc/contract";
 export const objectPresignedGetUrlContract = oc
   .route({
     method: "POST",
-    path: "/:bucket/objects/*/presigned-url",
+    path: "/:bucket/objects/*objectName/presigned-url",
     summary: "Generate presigned download URL",
     description: "Generate a temporary presigned URL for downloading an object",
   })

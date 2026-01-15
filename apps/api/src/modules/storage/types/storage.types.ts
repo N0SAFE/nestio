@@ -21,6 +21,8 @@ export interface ObjectListResult {
 
 export interface UploadResult {
   etag: string;
+  size: number;
+  contentType: string;
   versionId?: string;
 }
 

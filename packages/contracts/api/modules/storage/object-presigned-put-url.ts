@@ -5,7 +5,7 @@ import { oc } from "@orpc/contract";
 export const objectPresignedPutUrlContract = oc
   .route({
     method: "POST",
-    path: "/:bucket/objects/*/presigned-upload-url",
+    path: "/:bucket/objects/*objectName/presigned-upload-url",
     summary: "Generate presigned upload URL",
     description: "Generate a temporary presigned URL for uploading an object",
   })

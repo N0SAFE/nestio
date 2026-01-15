@@ -5,7 +5,7 @@ import { oc } from "@orpc/contract";
 export const objectDeleteContract = oc
   .route({
     method: "DELETE",
-    path: "/:bucket/objects/*",
+    path: "/:bucket/objects/*objectName",
     summary: "Delete an object",
     description: "Delete a single object from a bucket",
   })

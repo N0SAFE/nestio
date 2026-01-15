@@ -6,7 +6,7 @@ import { objectSchema } from "../../common/storage";
 export const objectStatContract = oc
   .route({
     method: "GET",
-    path: "/:bucket/objects/*/stat",
+    path: "/:bucket/objects/*objectName/stat",
     summary: "Get object metadata",
     description: "Get metadata and stats for an object without downloading it",
   })

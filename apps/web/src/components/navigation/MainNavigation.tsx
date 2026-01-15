@@ -14,22 +14,16 @@ import {
 import {
     Home,
     AuthSignin,
-    AuthDashboard,
-    Showcase,
-    ShowcaseClient,
-    ShowcaseServer,
 } from '@/routes'
 import { useSession } from '@/lib/auth'
 import {
     Home as HomeIcon,
-    Database,
-    Server,
-    Monitor,
+    HardDrive,
     ChevronDown,
-    LayoutDashboard,
 } from 'lucide-react'
 import SignOutButton from '../signout/signoutButton'
 import { validateEnvPath } from '#/env'
+import Link from 'next/link'
 
 const MainNavigation: React.FC = () => {
     const pathname = usePathname()
@@ -45,7 +39,7 @@ const MainNavigation: React.FC = () => {
     const isActivePath = (path: string) => pathname.startsWith(path)
 
     // Note: MainNavigation is now only rendered in (app) route group
-    // Dashboard has its own layout with DashboardSidebar
+    // This is the main navigation for the storage app
 
     return (
         <nav className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
@@ -53,9 +47,9 @@ const MainNavigation: React.FC = () => {
                 <div className="flex items-center space-x-4">
                     <Home.Link className="flex items-center space-x-2">
                         <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-md">
-                            <HomeIcon className="h-4 w-4" />
+                            <HardDrive className="h-4 w-4" />
                         </div>
-                        <span className="font-bold">NestJS App</span>
+                        <span className="font-bold">Nestio Storage</span>
                     </Home.Link>
                 </div>
 
@@ -71,80 +65,20 @@ const MainNavigation: React.FC = () => {
                         </Button>
                     </Home.Link>
 
-                    {/* Dashboard link - visible only when authenticated */}
+                    {/* Storage link - visible when authenticated */}
                     {session?.user && (
-                        <AuthDashboard.Link>
+                        <Link href="/storage">
                             <Button
-                                variant={isActivePath('/dashboard') ? 'default' : 'ghost'}
+                                variant={isActivePath('/storage') ? 'default' : 'ghost'}
                                 size="sm"
                                 className="flex items-center space-x-2"
                             >
-                                <LayoutDashboard className="h-4 w-4" />
-                                <span>Dashboard</span>
+                                <HardDrive className="h-4 w-4" />
+                                <span>Buckets</span>
                             </Button>
-                        </AuthDashboard.Link>
+                        </Link>
                     )}
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant={
-                                    pathname.startsWith('/showcase')
-                                        ? 'default'
-                                        : 'ghost'
-                                }
-                                size="sm"
-                                className="flex items-center space-x-2"
-                            >
-                                <Database className="h-4 w-4" />
-                                <span>Showcase</span>
-                                <ChevronDown className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Data Examples</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Showcase.Link className="flex w-full items-center space-x-2">
-                                    <Database className="h-4 w-4" />
-                                    <div>
-                                        <div className="font-medium">
-                                            Overview
-                                        </div>
-                                        <div className="text-muted-foreground text-sm">
-                                            All examples
-                                        </div>
-                                    </div>
-                                </Showcase.Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <ShowcaseClient.Link className="flex w-full items-center space-x-2">
-                                    <Monitor className="h-4 w-4" />
-                                    <div>
-                                        <div className="font-medium">
-                                            Client Side
-                                        </div>
-                                        <div className="text-muted-foreground text-sm">
-                                            React Query examples
-                                        </div>
-                                    </div>
-                                </ShowcaseClient.Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <ShowcaseServer.Link className="flex w-full items-center space-x-2">
-                                    <Server className="h-4 w-4" />
-                                    <div>
-                                        <div className="font-medium">
-                                            Server Side
-                                        </div>
-                                        <div className="text-muted-foreground text-sm">
-                                            SSR examples
-                                        </div>
-                                    </div>
-                                </ShowcaseServer.Link>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                     {docsUrl && (
                         <a href={docsUrl} target="_blank" rel="noreferrer">
                             <Button
@@ -152,7 +86,7 @@ const MainNavigation: React.FC = () => {
                                 size="sm"
                                 className="flex items-center space-x-2"
                             >
-                                <Server className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4" />
                                 <span>Docs</span>
                             </Button>
                         </a>

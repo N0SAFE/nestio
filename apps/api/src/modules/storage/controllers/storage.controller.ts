@@ -30,8 +30,9 @@ export class StorageController {
   bucketCreate() {
     return implement(storageContract.bucketCreate)
       .use(requireAuth())
-      .handler(async ({ input }) => {
-        await this.storageService.createBucket(input.name);
+      .handler(async ({ input, context }) => {
+        // Pass user ID from auth context as bucket owner
+        await this.storageService.createBucket(input.name, context.auth.user.id);
         // Get the bucket info after creation
         const buckets = await this.storageService.listBuckets();
         const bucket = buckets.find((b) => b.name === input.name);
@@ -189,6 +190,27 @@ export class StorageController {
         return {
           url,
           expiresAt: expiresAt.toISOString(),
+        };
+      });
+  }
+
+  @Implement(storageContract.objectUpload)
+  objectUpload() {
+    return implement(storageContract.objectUpload)
+      .use(requireAuth())
+      .handler(async ({ input }) => {
+        const result = await this.storageService.uploadObject({
+          bucket: input.bucket,
+          objectName: input.objectName,
+          file: input.file,
+        });
+
+        return {
+          name: result.name,
+          key: result.key,
+          size: result.size,
+          etag: result.etag,
+          contentType: result.contentType,
         };
       });
   }

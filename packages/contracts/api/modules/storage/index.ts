@@ -12,6 +12,7 @@ import { objectDeleteContract } from './object-delete';
 import { objectStatContract } from './object-stat';
 import { objectPresignedGetUrlContract } from './object-presigned-get-url';
 import { objectPresignedPutUrlContract } from './object-presigned-put-url';
+import { objectUploadContract } from './object-upload';
 
 // Combine into main storage contract
 export const storageContract = oc.tag("Storage").prefix("/storage").router({
@@ -27,6 +28,7 @@ export const storageContract = oc.tag("Storage").prefix("/storage").router({
   objectStat: objectStatContract,
   objectPresignedGetUrl: objectPresignedGetUrlContract,
   objectPresignedPutUrl: objectPresignedPutUrlContract,
+  objectUpload: objectUploadContract,
 });
 
 export type StorageContract = typeof storageContract;
@@ -41,3 +43,4 @@ export * from './object-delete';
 export * from './object-stat';
 export * from './object-presigned-get-url';
 export * from './object-presigned-put-url';
+export * from './object-upload';

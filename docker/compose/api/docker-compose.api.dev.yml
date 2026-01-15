@@ -21,32 +21,6 @@ services:
           - api-db-dev
           - database
 
-  # MinIO Object Storage for development
-  minio-dev:
-    container_name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}-minio-dev
-    image: minio/minio:latest
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    volumes:
-      - minio_data_dev:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      app_network_dev:
-        aliases:
-          - minio-dev
-          - minio
-          - storage
-
   # NestJS API for development
   api-dev:
     container_name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}-api-dev
@@ -58,8 +32,6 @@ services:
         - "${COMPOSE_PROJECT_NAME:-nextjs-nestjs}-api-dev:${API_VERSION:-dev}"
     depends_on:
       api-db-dev:
-        condition: service_healthy
-      minio-dev:
         condition: service_healthy
     restart: unless-stopped
     mem_limit: 6g
@@ -79,6 +51,7 @@ services:
             - docker/compose/docker-compose.dev.yml
         # Sync+Restart when migrations change to automatically apply them
         - action: sync+restart
+          initial_sync: true
           path: ../../..
           target: /app
           include:
@@ -100,6 +73,7 @@ services:
             - packages/**/package.json
         # Sync source code excluding node_modules and build artifacts
         - action: sync
+          initial_sync: true
           path: ../../..
           target: /app
           ignore:
@@ -149,6 +123,8 @@ services:
       - turbo_cache_dev:/root/.cache/turbo
       # Persistent uploads directory for media files
       - api_uploads_dev:/app/apps/api/uploads
+      # Persistent storage directory for custom object storage
+      - api_storage_dev:/app/storage
     environment:
       # Runtime
       - NODE_ENV=development
@@ -187,15 +163,10 @@ services:
       - DEFAULT_ADMIN_EMAIL=${DEFAULT_ADMIN_EMAIL:-admin@admin.com}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-adminadmin}
       
-      # MinIO/S3 Storage Configuration
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio-dev:9000}
-      - MINIO_PORT=${MINIO_PORT:-9000}
-      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
-      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
-      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      # Custom Object Storage Configuration
+      - STORAGE_ROOT_PATH=/app/storage/buckets
+      - STORAGE_MAX_FILE_SIZE=5368709120
+      - STORAGE_MULTIPART_THRESHOLD=104857600
 
       # Enable seeding for mock data (development mode)
       - ENABLE_SEEDING=true
@@ -232,5 +203,5 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_turbo_cache_dev
   api_uploads_dev:
     name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_api_uploads_dev
-  minio_data_dev:
-    name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_minio_data_dev
+  api_storage_dev:
+    name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_api_storage_dev
