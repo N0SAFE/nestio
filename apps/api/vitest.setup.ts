@@ -1,14 +1,24 @@
 import { beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import 'reflect-metadata';
+import { getMockEnv } from '@repo/env';
 
 // Set up test environment variables BEFORE any other imports to ensure they're available
 // when modules are loaded and the env schema is validated
+const mockApiEnv = getMockEnv('api');
+
+// Apply mock environment variables to process.env BEFORE any module imports
+Object.entries(mockApiEnv).forEach(([key, value]) => {
+  if (!(key in process.env)) {
+    // @ts-ignore
+    process.env[key] = value;
+  }
+});
+
+// Override NODE_ENV to test
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/testdb';
-process.env.AUTH_SECRET = 'test-auth-secret-key-for-testing-only';
-process.env.BETTER_AUTH_SECRET = 'test-auth-secret-key-for-testing-only';
-process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3001';
-process.env.API_PORT = '3001';
+
+// Log applied env for debugging
+console.log('Applied mock env variables:', Object.keys(mockApiEnv));
 
 // Global test setup for NestJS API
 beforeEach(() => {

@@ -56,7 +56,7 @@ export const DEFAULT_REDACT_PATHS = [
 /**
  * Logger configuration options
  */
-export interface LoggerOptions {
+export type LoggerOptions = {
   /**
    * Minimum log level to display
    * @default 'info' in production, 'debug' in development
@@ -95,7 +95,7 @@ export interface LoggerOptions {
 /**
  * Logger instance interface
  */
-export interface Logger {
+export type Logger = {
   /**
    * Log trace message (most verbose, for detailed debugging)
    */
@@ -201,7 +201,7 @@ function createPinoLogger(options: LoggerOptions = {}): pino.Logger {
  * Create a logger instance that wraps Pino
  */
 function createLogger(options: LoggerOptions = {}, pinoInstance?: pino.Logger): Logger {
-  const pinoLogger = pinoInstance || createPinoLogger(options)
+  const pinoLogger = pinoInstance ?? createPinoLogger(options)
   const scope = options.scope
 
   return {

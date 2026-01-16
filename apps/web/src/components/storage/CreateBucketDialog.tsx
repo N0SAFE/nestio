@@ -52,7 +52,7 @@ export function CreateBucketDialog(): JSX.Element {
               id="bucketName"
               placeholder="my-bucket"
               value={bucketName}
-              onChange={(e) => setBucketName(e.target.value)}
+              onChange={(e) => { setBucketName(e.target.value); }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   void handleCreate()
@@ -65,11 +65,11 @@ export function CreateBucketDialog(): JSX.Element {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => { setOpen(false); }}>
             Cancel
           </Button>
           <Button
-            onClick={handleCreate}
+            onClick={() => { void handleCreate(); }}
             disabled={!bucketName.trim() || createBucket.isPending}
           >
             {createBucket.isPending ? 'Creating...' : 'Create'}

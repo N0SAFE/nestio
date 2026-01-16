@@ -3,14 +3,15 @@
 import React from 'react'
 import { usePathname } from 'next/navigation'
 import { Button } from '@repo/ui/components/shadcn/button'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@repo/ui/components/shadcn/dropdown-menu'
+// DropdownMenu components not currently used
+// import {
+//     DropdownMenu,
+//     DropdownMenuContent,
+//     DropdownMenuItem,
+//     DropdownMenuLabel,
+//     DropdownMenuSeparator,
+//     DropdownMenuTrigger,
+// } from '@repo/ui/components/shadcn/dropdown-menu'
 import {
     Home,
     AuthSignin,

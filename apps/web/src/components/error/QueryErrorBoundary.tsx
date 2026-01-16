@@ -65,7 +65,7 @@ export function QueryErrorBoundary({
 }: QueryErrorBoundaryProps): ReactNode {
   const handleError = (error: Error, errorInfo: React.ErrorInfo): void => {
     // Log query error with context
-    logger.error(error, {
+    logger.error(error.message, {
       boundary: 'QueryErrorBoundary',
       context,
       componentStack: errorInfo.componentStack,

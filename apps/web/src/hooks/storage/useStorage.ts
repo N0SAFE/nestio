@@ -87,7 +87,7 @@ export function useObjects(bucket: string, prefix?: string) {
     orpc.storage.objectList.queryOptions({
       input: {
         bucket,
-        prefix: prefix || '',
+        prefix: prefix ?? '',
         maxKeys: 1000,
       },
     })
@@ -118,7 +118,7 @@ export function useDeleteObject() {
     mutationFn: async ({ bucket, objectName }: { bucket: string; objectName: string }) => {
       return await orpc.storage.objectDelete.call({ bucket, objectName })
     },
-    onSuccess: (_, { bucket, objectName }) => {
+    onSuccess: (_, { objectName }) => {
       void queryClient.invalidateQueries({ queryKey: ['storage', 'objectList'] })
       toast.success(`Object "${objectName}" deleted successfully`)
     },

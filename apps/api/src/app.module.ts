@@ -17,7 +17,7 @@ import { EnvService } from "./config/env/env.service";
 import { EnvModule } from "./config/env/env.module";
 import { REQUEST } from '@nestjs/core'
 import {
-  experimental_SmartCoercionPlugin as SmartCoercionPlugin
+  SmartCoercionPlugin
 } from '@orpc/json-schema'
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import type { ORPCAuthContext } from "./core/modules/auth/orpc/types";

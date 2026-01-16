@@ -23,5 +23,5 @@ export const objectPresignedPutUrlContract = oc
     }),
   );
 
-export type ObjectPresignedPutUrlInput = z.infer<typeof objectPresignedPutUrlContract.InputSchema>;
-export type ObjectPresignedPutUrlOutput = z.infer<typeof objectPresignedPutUrlContract.OutputSchema>;
+export type ObjectPresignedPutUrlInput = z.infer<NonNullable<typeof objectPresignedPutUrlContract['~orpc']['inputSchema']>>;
+export type ObjectPresignedPutUrlOutput = z.infer<NonNullable<typeof objectPresignedPutUrlContract['~orpc']['outputSchema']>>;

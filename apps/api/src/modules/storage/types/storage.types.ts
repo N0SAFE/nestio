@@ -35,7 +35,7 @@ export interface SignedUrlParams {
 export interface PutObjectParams {
   bucket: string;
   objectName: string;
-  data: Buffer | ReadableStream;
+  data: Buffer;
   size?: number;
   metadata?: Record<string, string>;
   contentType?: string;

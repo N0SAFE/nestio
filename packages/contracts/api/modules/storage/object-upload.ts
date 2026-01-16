@@ -9,7 +9,7 @@ export const objectUploadContract = oc.route({
     z.object({
       bucket: z.string().describe("Bucket name"),
       objectName: z.string().describe("Object key/name"),
-      file: z.any().describe("File to upload"),
+      file: z.file().describe("File to upload"),
     })
   )
   .output(

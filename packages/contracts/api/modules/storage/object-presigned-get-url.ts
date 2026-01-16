@@ -23,5 +23,5 @@ export const objectPresignedGetUrlContract = oc
     }),
   );
 
-export type ObjectPresignedGetUrlInput = z.infer<typeof objectPresignedGetUrlContract.InputSchema>;
-export type ObjectPresignedGetUrlOutput = z.infer<typeof objectPresignedGetUrlContract.OutputSchema>;
+export type ObjectPresignedGetUrlInput = z.infer<NonNullable<typeof objectPresignedGetUrlContract['~orpc']['inputSchema']>>;
+export type ObjectPresignedGetUrlOutput = z.infer<NonNullable<typeof objectPresignedGetUrlContract['~orpc']['outputSchema']>>;

@@ -206,8 +206,8 @@ export class StorageController {
         });
 
         return {
-          name: result.name,
-          key: result.key,
+          name: input.objectName,
+          key: input.objectName,
           size: result.size,
           etag: result.etag,
           contentType: result.contentType,

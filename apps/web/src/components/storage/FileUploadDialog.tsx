@@ -52,7 +52,8 @@ export function FileUploadDialog({
 
   const handleUpload = async () => {
     for (let i = 0; i < files.length; i++) {
-      if (files[i]!.status !== 'pending') continue
+      const currentFile = files[i];
+      if (currentFile?.status !== 'pending') continue
 
       // Update status to uploading
       setFiles((prev) =>
@@ -62,7 +63,7 @@ export function FileUploadDialog({
       try {
         await upload.mutateAsync({
           bucket,
-          file: files[i]!.file,
+          file: currentFile.file,
           onProgress: (progress) => {
             const percent = progress.percent ?? ((progress.loaded / (progress.total ?? 1)) * 100)
             setFiles((prev) =>
@@ -75,7 +76,7 @@ export function FileUploadDialog({
         setFiles((prev) =>
           prev.map((f, idx) => (idx === i ? { ...f, status: 'completed' as const } : f))
         )
-      } catch (error) {
+      } catch {
         // Update status to error
         setFiles((prev) =>
           prev.map((f, idx) => (idx === i ? { ...f, status: 'error' as const } : f))
@@ -131,7 +132,7 @@ export function FileUploadDialog({
               type="file"
               multiple
               className="hidden"
-              onChange={(e) => handleFileSelect(e.target.files)}
+              onChange={(e) => { handleFileSelect(e.target.files); }}
             />
           </div>
 
@@ -154,7 +155,7 @@ export function FileUploadDialog({
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
-                            onClick={() => removeFile(index)}
+                            onClick={() => { removeFile(index); }}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -199,10 +200,10 @@ export function FileUploadDialog({
               Cancel
             </Button>
             <Button
-              onClick={handleUpload}
+              onClick={() => { void handleUpload(); }}
               disabled={files.length === 0 || isUploading}
             >
-              {isUploading ? 'Uploading...' : `Upload ${files.length} file(s)`}
+              {isUploading ? 'Uploading...' : `Upload ${files.length.toString()} file(s)`}
             </Button>
           </div>
         </div>

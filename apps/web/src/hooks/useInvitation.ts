@@ -259,7 +259,7 @@ export const invitationCustomHooks = defineCustomHooks({
   usePendingInvitations: (options?: { enabled?: boolean }) => {
     return useQuery({
       queryKey: invitationKeys.organizationPending(),
-      queryFn: async (): Promise<Invitation[]> => {
+      queryFn: (): Invitation[] => {
         // NOTE: Better Auth organization plugin does not provide global invitation listing.
         // Organization invitations must be fetched per-organization using:
         // authClient.organization.getInvitations({ organizationId })
@@ -286,7 +286,7 @@ export const invitationCustomHooks = defineCustomHooks({
   useAllInvitations: (options?: { enabled?: boolean }) => {
     return useQuery({
       queryKey: invitationKeys.organizationLists(),
-      queryFn: async (): Promise<Invitation[]> => {
+      queryFn: (): Invitation[] => {
         // NOTE: Better Auth organization plugin does not provide global invitation listing.
         // Organization invitations must be fetched per-organization using:
         // authClient.organization.getInvitations({ organizationId })

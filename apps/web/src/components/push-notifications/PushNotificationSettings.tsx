@@ -70,7 +70,7 @@ export function PushNotificationSettings() {
         
         const backendSubscriptions = push.subscriptions.data?.subscriptions ?? []
         const isBackendSubscribed = browserSubscription
-          ? backendSubscriptions.some((sub: any) => sub.endpoint === browserSubscription.endpoint)
+          ? backendSubscriptions.some((sub: { endpoint: string }) => sub.endpoint === browserSubscription.endpoint)
           : false
         
         if (browserSubscription && !isBackendSubscribed) {

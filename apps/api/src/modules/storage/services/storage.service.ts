@@ -107,6 +107,10 @@ export class StorageService {
         // Calculate ETag (MD5 hash)
         const etag = this.fs.calculateETag(params.data);
 
+        // Determine the actual size from params or buffer length  
+         
+        const objectSize: number = params.size ?? params.data.length;
+
         // Write object to filesystem
         await this.fs.writeObject(params.bucket, params.objectName, params.data);
 
@@ -114,7 +118,7 @@ export class StorageService {
         await this.repository.upsertObject({
             bucketId: bucket.id,
             key: params.objectName,
-            size: params.size,
+            size: objectSize,
             etag,
             contentType: params.contentType,
             metadata: params.metadata,
@@ -124,6 +128,8 @@ export class StorageService {
 
         return {
             etag,
+            size: objectSize,
+            contentType: params.contentType ?? 'application/octet-stream',
             versionId: undefined,
         };
     }
@@ -284,7 +290,7 @@ export class StorageService {
             size: sourceObj.size,
             etag: sourceObj.etag,
             contentType: sourceObj.contentType,
-            metadata: sourceObj.metadata,
+            metadata: sourceObj.metadata ?? undefined,
         });
 
         this.logger.log(
@@ -358,7 +364,7 @@ export class StorageService {
         const arrayBuffer = await params.file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Calculate ETag (MD5 hash)
+        // Calculate ETag (MD5 hash) - buffer is guaranteed to be Buffer type here
         const etag = this.fs.calculateETag(buffer);
 
         // Write file to filesystem
@@ -379,6 +385,8 @@ export class StorageService {
 
         return {
             etag,
+            size: buffer.length,
+            contentType,
         };
     }
 }

@@ -21,5 +21,5 @@ export const objectListContract = oc
   )
   .output(objectListSchema);
 
-export type ObjectListInput = z.infer<typeof objectListContract.InputSchema>;
-export type ObjectListOutput = z.infer<typeof objectListContract.OutputSchema>;
+export type ObjectListInput = z.infer<NonNullable<typeof objectListContract['~orpc']['inputSchema']>>;
+export type ObjectListOutput = z.infer<NonNullable<typeof objectListContract['~orpc']['outputSchema']>>;

@@ -63,11 +63,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     
     // Log error with context
     const logContext = context ? { boundary: context } : {}
-    logger.error(error, {
+    logger.error(error.message, {
       ...logContext,
       componentStack: errorInfo.componentStack,
       errorMessage: error.message,
       errorName: error.name,
+      error: error.stack,
     })
 
     // Call custom error handler if provided

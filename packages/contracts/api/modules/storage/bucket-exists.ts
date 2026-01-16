@@ -21,5 +21,5 @@ export const bucketExistsContract = oc
     }),
   );
 
-export type BucketExistsInput = z.infer<typeof bucketExistsContract.InputSchema>;
-export type BucketExistsOutput = z.infer<typeof bucketExistsContract.OutputSchema>;
+export type BucketExistsInput = z.infer<NonNullable<typeof bucketExistsContract['~orpc']['inputSchema']>>;
+export type BucketExistsOutput = z.infer<NonNullable<typeof bucketExistsContract['~orpc']['outputSchema']>>;

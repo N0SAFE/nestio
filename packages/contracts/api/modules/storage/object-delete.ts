@@ -22,5 +22,5 @@ export const objectDeleteContract = oc
     }),
   );
 
-export type ObjectDeleteInput = z.infer<typeof objectDeleteContract.InputSchema>;
-export type ObjectDeleteOutput = z.infer<typeof objectDeleteContract.OutputSchema>;
+export type ObjectDeleteInput = z.infer<NonNullable<typeof objectDeleteContract['~orpc']['inputSchema']>>;
+export type ObjectDeleteOutput = z.infer<NonNullable<typeof objectDeleteContract['~orpc']['outputSchema']>>;

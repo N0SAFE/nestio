@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { oc } from "@orpc/contract";
 import { standard, createSortingConfigSchema, createPaginationConfigSchema, createFilteringConfigSchema, defineQueryConfig, type ComputeInputSchema, type QueryConfig } from "@repo/orpc-utils";
 import { userSchema } from "@repo/api-contracts/common/user";
-import { ContractProcedureDef, InferSchemaInput } from "@orpc/contract";
+import type { ContractProcedureDef, InferSchemaInput } from "@orpc/contract";
 
 // Define sorting fields
 const sortingFieldsArray = ["createdAt", "name", "email", "updatedAt"] as const;

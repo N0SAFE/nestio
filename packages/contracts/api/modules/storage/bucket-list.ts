@@ -18,5 +18,5 @@ export const bucketListContract = oc
     }),
   );
 
-export type BucketListInput = z.infer<typeof bucketListContract.InputSchema>;
-export type BucketListOutput = z.infer<typeof bucketListContract.OutputSchema>;
+export type BucketListInput = z.infer<NonNullable<typeof bucketListContract['~orpc']['inputSchema']>>;
+export type BucketListOutput = z.infer<NonNullable<typeof bucketListContract['~orpc']['outputSchema']>>;

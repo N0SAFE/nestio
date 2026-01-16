@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "@/core/modules/database/services/database.service";
 import * as schema from "@/config/drizzle/schema";
 import { eq, and, like, desc, type InferSelectModel } from "drizzle-orm";

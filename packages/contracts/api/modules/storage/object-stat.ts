@@ -18,5 +18,5 @@ export const objectStatContract = oc
   )
   .output(objectSchema);
 
-export type ObjectStatInput = z.infer<typeof objectStatContract.InputSchema>;
-export type ObjectStatOutput = z.infer<typeof objectStatContract.OutputSchema>;
+export type ObjectStatInput = z.infer<NonNullable<typeof objectStatContract['~orpc']['inputSchema']>>;
+export type ObjectStatOutput = z.infer<NonNullable<typeof objectStatContract['~orpc']['outputSchema']>>;

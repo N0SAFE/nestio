@@ -39,7 +39,8 @@ function formatBytes(bytes: number): string {
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+  const sizeUnit = sizes[i] ?? 'Bytes'
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2)).toString()} ${sizeUnit}`
 }
 
 function formatDate(date: Date): string {
@@ -149,13 +150,13 @@ export function ObjectTable({ bucket, objects, onNavigate }: ObjectTableProps): 
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => handleDownload(object.key, object.name)}
+                        onClick={() => { void handleDownload(object.key, object.name); }}
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Download
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleDelete(object.key)}
+                        onClick={() => { void handleDelete(object.key); }}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />

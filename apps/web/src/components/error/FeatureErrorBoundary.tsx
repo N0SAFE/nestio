@@ -80,7 +80,7 @@ export function FeatureErrorBoundary({
 }: FeatureErrorBoundaryProps): ReactNode {
   const handleError = (error: Error, errorInfo: React.ErrorInfo): void => {
     // Structured logging with feature context
-    logger.error(error, {
+    logger.error(error.message, {
       boundary: 'FeatureErrorBoundary',
       feature,
       componentStack: errorInfo.componentStack,

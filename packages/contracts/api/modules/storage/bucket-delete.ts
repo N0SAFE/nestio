@@ -21,5 +21,5 @@ export const bucketDeleteContract = oc
     }),
   );
 
-export type BucketDeleteInput = z.infer<typeof bucketDeleteContract.InputSchema>;
-export type BucketDeleteOutput = z.infer<typeof bucketDeleteContract.OutputSchema>;
+export type BucketDeleteInput = z.infer<NonNullable<typeof bucketDeleteContract['~orpc']['inputSchema']>>;
+export type BucketDeleteOutput = z.infer<NonNullable<typeof bucketDeleteContract['~orpc']['outputSchema']>>;

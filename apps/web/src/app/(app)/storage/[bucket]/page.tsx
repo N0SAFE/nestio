@@ -42,7 +42,7 @@ export default function BucketPage(): JSX.Element {
 
   // Transform objects to include folder structure
   const transformedObjects = objects.map((obj) => ({
-    name: obj.name.split('/').pop() || obj.name,
+    name: obj.name.split('/').pop() ?? obj.name,
     key: obj.name,
     size: obj.size,
     lastModified: obj.lastModified ? new Date(obj.lastModified) : undefined,
@@ -80,7 +80,7 @@ export default function BucketPage(): JSX.Element {
                       <BreadcrumbLink asChild>
                         <button
                           onClick={() =>
-                            setCurrentPath(pathParts.slice(0, index + 1).join('/'))
+                            { setCurrentPath(pathParts.slice(0, index + 1).join('/')); }
                           }
                         >
                           {part}
@@ -121,7 +121,7 @@ export default function BucketPage(): JSX.Element {
       <ObjectTable
         bucket={bucket}
         objects={transformedObjects}
-        onNavigate={(prefix) => setCurrentPath(prefix)}
+        onNavigate={(prefix) => { setCurrentPath(prefix); }}
       />
     </div>
   )
