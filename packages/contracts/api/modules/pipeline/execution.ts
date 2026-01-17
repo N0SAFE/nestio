@@ -19,11 +19,11 @@ const PipelineExecutionSchema = z.object({
   totalSteps: z.number().int().min(0),
   output: z.unknown().nullable(),
   error: z.record(z.string(), z.unknown()).nullable(),
-  startedAt: z.iso.datetime().nullable(),
-  completedAt: z.iso.datetime().nullable(),
+  startedAt: z.date().nullable(),
+  completedAt: z.date().nullable(),
   durationMs: z.number().int().nullable(),
   isDryRun: z.boolean(),
-  createdAt: z.iso.datetime(),
+  createdAt: z.date(),
 });
 
 /**

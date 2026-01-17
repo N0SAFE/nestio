@@ -128,7 +128,7 @@ export class PipelineEventService extends BaseEventService<PipelineEventContract
       currentAction: null,
       completedActions: [],
       error: null,
-      startedAt: new Date().toISOString(),
+      startedAt: new Date(),
       timestamp: Date.now(),
     };
 
@@ -167,7 +167,7 @@ export class PipelineEventService extends BaseEventService<PipelineEventContract
         id: actionId,
         name: actionName,
         status: "running",
-        startedAt: new Date().toISOString(),
+        startedAt: new Date(),
         progress: 0,
       },
       completedActions: [],

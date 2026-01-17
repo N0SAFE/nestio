@@ -124,18 +124,18 @@ export const actionProviders = pgTable(
     
     // Permissions
     isPublic: boolean("is_public").notNull().default(false),
-    ownerId: uuid("owner_id").references(() => users.id, { onDelete: "cascade" }),
+    ownerId: uuid("owner_id").references(() => user.id, { onDelete: "cascade" }),
     
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     nameIdx: index("action_providers_name_idx").on(table.name),
     typeIdx: index("action_providers_type_idx").on(table.type),
     categoryIdx: index("action_providers_category_idx").on(table.category),
     ownerIdx: index("action_providers_owner_idx").on(table.ownerId),
-  })
+  }]
 );
 
 /**
@@ -165,16 +165,16 @@ export const actions = pgTable(
     // Ownership
     ownerId: uuid("owner_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     providerIdx: index("actions_provider_idx").on(table.providerId),
     ownerIdx: index("actions_owner_idx").on(table.ownerId),
-  })
+  }]
 );
 
 /**
@@ -194,7 +194,7 @@ export const triggers = pgTable(
     type: triggerTypeEnum("type").notNull(),
     
     // Scope - where this trigger applies
-    bucketId: uuid("bucket_id").references(() => buckets.id, { onDelete: "cascade" }),
+    bucketId: uuid("bucket_id").references(() => bucket.id, { onDelete: "cascade" }),
     objectKeyPattern: text("object_key_pattern"), // Glob pattern, e.g., "*.jpg"
     
     // Schedule configuration (for scheduled triggers)
@@ -210,19 +210,19 @@ export const triggers = pgTable(
     // Ownership
     ownerId: uuid("owner_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     lastTriggeredAt: timestamp("last_triggered_at"),
   },
-  (table) => ({
+  (table) => [{
     typeIdx: index("triggers_type_idx").on(table.type),
     bucketIdx: index("triggers_bucket_idx").on(table.bucketId),
     ownerIdx: index("triggers_owner_idx").on(table.ownerId),
     enabledIdx: index("triggers_enabled_idx").on(table.isEnabled),
-  })
+  }]
 );
 
 /**
@@ -247,7 +247,7 @@ export const pipelines = pgTable(
     
     // Timeout (milliseconds)
     timeoutMs: integer("timeout_ms").default(300000), // 5 minutes default
-    maxRetries: integer("max_retries").default(0),
+    maxRetries: integer("max_retries").notNull().default(0),
     
     // Variables - user can override at execution time
     variablesSchema: json("variables_schema"), // JSON Schema
@@ -259,16 +259,16 @@ export const pipelines = pgTable(
     // Ownership
     ownerId: uuid("owner_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     ownerIdx: index("pipelines_owner_idx").on(table.ownerId),
     enabledIdx: index("pipelines_enabled_idx").on(table.isEnabled),
-  })
+  }]
 );
 
 /**
@@ -301,16 +301,16 @@ export const pipelineActions = pgTable(
     
     // Error handling
     continueOnError: boolean("continue_on_error").notNull().default(false),
-    retryCount: integer("retry_count").default(0),
+    retryCount: integer("retry_count").notNull().default(0),
     
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     pipelineIdx: index("pipeline_actions_pipeline_idx").on(table.pipelineId),
     actionIdx: index("pipeline_actions_action_idx").on(table.actionId),
     orderIdx: index("pipeline_actions_order_idx").on(table.pipelineId, table.order),
-  })
+  }]
 );
 
 /**
@@ -332,11 +332,11 @@ export const pipelineTriggers = pgTable(
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     pk: primaryKey({ columns: [table.pipelineId, table.triggerId] }),
     pipelineIdx: index("pipeline_triggers_pipeline_idx").on(table.pipelineId),
     triggerIdx: index("pipeline_triggers_trigger_idx").on(table.triggerId),
-  })
+  }]
 );
 
 /**
@@ -361,9 +361,9 @@ export const pipelineExecutions = pgTable(
     
     // Input context
     inputObjects: json("input_objects")
-      .$type<Array<{ bucket: string; key: string }>>()
+      .$type<{ bucket: string; key: string }[]>()
       .notNull(),
-    variables: json("variables").default({}),
+    variables: json("variables").notNull().default({}),
     
     // Execution state
     status: executionStatusEnum("status").notNull().default("pending"),
@@ -384,7 +384,7 @@ export const pipelineExecutions = pgTable(
     // Ownership
     ownerId: uuid("owner_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     
     // Dry run mode
     isDryRun: boolean("is_dry_run").notNull().default(false),
@@ -393,12 +393,12 @@ export const pipelineExecutions = pgTable(
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     pipelineIdx: index("pipeline_executions_pipeline_idx").on(table.pipelineId),
     statusIdx: index("pipeline_executions_status_idx").on(table.status),
     ownerIdx: index("pipeline_executions_owner_idx").on(table.ownerId),
     createdIdx: index("pipeline_executions_created_idx").on(table.createdAt),
-  })
+  }]
 );
 
 /**
@@ -446,11 +446,11 @@ export const executionActions = pgTable(
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
+  (table) => [{
     executionIdx: index("execution_actions_execution_idx").on(table.executionId),
     statusIdx: index("execution_actions_status_idx").on(table.status),
     actionIdx: index("execution_actions_action_idx").on(table.actionId),
-  })
+  }]
 );
 
 // ============================================================================
@@ -458,9 +458,9 @@ export const executionActions = pgTable(
 // ============================================================================
 
 export const actionProvidersRelations = relations(actionProviders, ({ one, many }) => ({
-  owner: one(users, {
+  owner: one(user, {
     fields: [actionProviders.ownerId],
-    references: [users.id],
+    references: [user.id],
   }),
   actions: many(actions),
 }));
@@ -470,31 +470,31 @@ export const actionsRelations = relations(actions, ({ one, many }) => ({
     fields: [actions.providerId],
     references: [actionProviders.id],
   }),
-  owner: one(users, {
+  owner: one(user, {
     fields: [actions.ownerId],
-    references: [users.id],
+    references: [user.id],
   }),
   pipelineActions: many(pipelineActions),
   executionActions: many(executionActions),
 }));
 
 export const triggersRelations = relations(triggers, ({ one, many }) => ({
-  bucket: one(buckets, {
+  bucket: one(bucket, {
     fields: [triggers.bucketId],
-    references: [buckets.id],
+    references: [bucket.id],
   }),
-  owner: one(users, {
+  owner: one(user, {
     fields: [triggers.ownerId],
-    references: [users.id],
+    references: [user.id],
   }),
   pipelineTriggers: many(pipelineTriggers),
   executions: many(pipelineExecutions),
 }));
 
 export const pipelinesRelations = relations(pipelines, ({ one, many }) => ({
-  owner: one(users, {
+  owner: one(user, {
     fields: [pipelines.ownerId],
-    references: [users.id],
+    references: [user.id],
   }),
   pipelineActions: many(pipelineActions),
   pipelineTriggers: many(pipelineTriggers),
@@ -533,9 +533,9 @@ export const pipelineExecutionsRelations = relations(pipelineExecutions, ({ one,
     fields: [pipelineExecutions.triggerId],
     references: [triggers.id],
   }),
-  owner: one(users, {
+  owner: one(user, {
     fields: [pipelineExecutions.ownerId],
-    references: [users.id],
+    references: [user.id],
   }),
   executionActions: many(executionActions),
 }));

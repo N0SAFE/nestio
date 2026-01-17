@@ -43,6 +43,13 @@
       "when": 1768213911289,
       "tag": "0005_spooky_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768650204008,
+      "tag": "0006_tricky_infant_terrible",
+      "breakpoints": true
     }
   ]
 }

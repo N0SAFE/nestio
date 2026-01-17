@@ -159,8 +159,8 @@ export class PipelineController {
 
         return {
           executionId: execution.id,
-          status: execution.status as any,
-          dryRunResult: execution.isDryRun ? execution.dryRunResult : undefined,
+          status: execution.status,
+          dryRunResult: execution.isDryRun ? (execution.output as Record<string, unknown> | undefined) : undefined,
         };
       });
   }
@@ -185,12 +185,10 @@ export class PipelineController {
     return implement(pipelineContract.getExecution)
       .use(requireAuth())
       .handler(async ({ input, context }) => {
-        const execution = await this.pipelineService.getExecution(
+        return this.pipelineService.getExecution(
           input.executionId,
           context.auth.user.id
         );
-
-        return { execution };
       });
   }
 
@@ -230,7 +228,7 @@ export class PipelineController {
         await pipelineService.verifyExecutionAccess(executionId, context.auth.user.id);
 
         // Check if execution is already completed
-        const execution = await pipelineService.getExecution(executionId, context.auth.user.id);
+        const { execution } = await pipelineService.getExecution(executionId, context.auth.user.id);
 
         if (
           execution.status === "completed" ||
@@ -242,15 +240,17 @@ export class PipelineController {
           yield {
             executionId: execution.id,
             pipelineId: execution.pipelineId,
-            status: execution.status as any,
+            status: execution.status,
             progress: {
               currentStep: execution.currentStep,
               totalSteps: execution.totalSteps,
-              percentage: Math.round((execution.currentStep / execution.totalSteps) * 100),
+              percentage: Math.round(((execution.currentStep) / execution.totalSteps) * 100),
             },
             currentAction: null,
             completedActions: [],
-            error: execution.error as any,
+            error: execution.error,
+            startedAt: execution.createdAt,
+            estimatedCompletion: undefined,
             timestamp: Date.now(),
           };
           return;

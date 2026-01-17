@@ -24,8 +24,8 @@ const PipelineSchema = z.object({
   defaultVariables: z.record(z.string(), z.unknown()),
   isEnabled: z.boolean(),
   ownerId: z.uuid(),
-  createdAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 const PipelineActionSchema = z.object({
@@ -37,7 +37,7 @@ const PipelineActionSchema = z.object({
   dependsOn: z.array(z.uuid()).nullable(),
   continueOnError: z.boolean(),
   retryCount: z.number().int().min(0),
-  createdAt: z.iso.datetime(),
+  createdAt: z.date(),
 });
 
 // ============================================================================

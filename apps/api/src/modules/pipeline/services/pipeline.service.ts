@@ -11,6 +11,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { eq, and, desc, sql, like, or } from "drizzle-orm";
 import * as schema from "@/config/drizzle/schema";
 import type { DatabaseService } from "@/core/modules/database/services/database.service";
+import { mapPipeline, mapPipelineAction, mapPipelineExecution } from "../utils/mappers";
 
 @Injectable()
 export class PipelineService {
@@ -31,19 +32,20 @@ export class PipelineService {
     const conditions = [eq(schema.pipelines.ownerId, userId)];
 
     if (search) {
-      conditions.push(
-        or(
-          like(schema.pipelines.name, `%${search}%`),
-          like(schema.pipelines.description, `%${search}%`)
-        )!
+      const searchCondition = or(
+        like(schema.pipelines.name, `%${search}%`),
+        like(schema.pipelines.description, `%${search}%`)
       );
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     if (isEnabled !== undefined) {
       conditions.push(eq(schema.pipelines.isEnabled, isEnabled));
     }
 
-    const [pipelines, [{ count }]] = await Promise.all([
+    const [pipelines, countResult] = await Promise.all([
       this.db.db
         .select()
         .from(schema.pipelines)
@@ -58,8 +60,8 @@ export class PipelineService {
     ]);
 
     return {
-      pipelines,
-      total: count,
+      pipelines: pipelines.map(mapPipeline),
+      total: countResult[0]?.count ?? 0,
     };
   }
 
@@ -93,8 +95,8 @@ export class PipelineService {
     }
 
     return {
-      pipeline,
-      actions: pipeline.pipelineActions,
+      pipeline: mapPipeline(pipeline),
+      actions: pipeline.pipelineActions.map(mapPipelineAction),
     };
   }
 
@@ -137,7 +139,11 @@ export class PipelineService {
       })
       .returning();
 
-    return { pipeline };
+    if (!pipeline) {
+      throw new Error("Failed to create pipeline");
+    }
+
+    return { pipeline: mapPipeline(pipeline) };
   }
 
   /**
@@ -173,7 +179,7 @@ export class PipelineService {
       throw new NotFoundException(`Pipeline ${pipelineId} not found`);
     }
 
-    return { pipeline };
+    return { pipeline: mapPipeline(pipeline) };
   }
 
   /**
@@ -194,7 +200,7 @@ export class PipelineService {
         )
       );
 
-    if (runningExecutions[0].count > 0) {
+    if ((runningExecutions[0]?.count ?? 0) > 0) {
       throw new BadRequestException(
         "Cannot delete pipeline with running executions. Cancel them first."
       );
@@ -258,7 +264,11 @@ export class PipelineService {
       })
       .returning();
 
-    return { pipelineAction };
+    if (!pipelineAction) {
+      throw new Error("Failed to add action to pipeline");
+    }
+
+    return { pipelineAction: mapPipelineAction(pipelineAction) };
   }
 
   /**
@@ -315,7 +325,7 @@ export class PipelineService {
       );
     }
 
-    return { pipelineAction };
+    return { pipelineAction: mapPipelineAction(pipelineAction) };
   }
 
   /**
@@ -360,7 +370,7 @@ export class PipelineService {
       throw new ForbiddenException("You do not have access to this execution");
     }
 
-    return execution;
+    return { execution: mapPipelineExecution(execution) };
   }
 
   /**
@@ -382,10 +392,15 @@ export class PipelineService {
     }
 
     if (status) {
-      conditions.push(eq(schema.pipelineExecutions.status, status as any));
+      conditions.push(
+        eq(
+          schema.pipelineExecutions.status,
+          status as "pending" | "running" | "completed" | "failed" | "cancelled" | "timeout"
+        )
+      );
     }
 
-    const [executions, [{ count }]] = await Promise.all([
+    const [executions, countResult] = await Promise.all([
       this.db.db
         .select()
         .from(schema.pipelineExecutions)
@@ -400,8 +415,8 @@ export class PipelineService {
     ]);
 
     return {
-      executions,
-      total: count,
+      executions: executions.map(mapPipelineExecution),
+      total: countResult[0]?.count ?? 0,
     };
   }
 

@@ -11,16 +11,28 @@
  */
 
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as schema from "@/config/drizzle/schema";
 import { PipelineEventService } from "../events/pipeline-event.service";
 import type { DatabaseService } from "@/core/modules/database/services/database.service";
+
+// Type for pipeline with nested relations
+type PipelineWithActions = typeof schema.pipelines.$inferSelect & {
+  pipelineActions: (typeof schema.pipelineActions.$inferSelect & {
+    action: typeof schema.actions.$inferSelect & {
+      provider: typeof schema.actionProviders.$inferSelect;
+    };
+  })[];
+};
+
+type PipelineAction = PipelineWithActions['pipelineActions'][number];
+type Action = PipelineAction['action'];
 
 interface ExecutionContext {
   executionId: string;
   pipelineId: string;
   userId: string;
-  inputObjects: Array<{ bucket: string; key: string }>;
+  inputObjects: { bucket: string; key: string }[];
   variables: Record<string, unknown>;
   isDryRun: boolean;
 }
@@ -41,7 +53,7 @@ export class PipelineExecutorService {
   async startExecution(params: {
     pipelineId: string;
     userId: string;
-    inputObjects: Array<{ bucket: string; key: string }>;
+    inputObjects: { bucket: string; key: string }[];
     variables?: Record<string, unknown>;
     dryRun?: boolean;
   }) {
@@ -101,6 +113,10 @@ export class PipelineExecutorService {
       })
       .returning();
 
+    if (!execution) {
+      throw new Error("Failed to create execution");
+    }
+
     // Execute asynchronously
     const context: ExecutionContext = {
       executionId: execution.id,
@@ -112,7 +128,7 @@ export class PipelineExecutorService {
     };
 
     // Don't await - run in background
-    this.executeAsync(context, pipeline).catch((error) => {
+    this.executeAsync(context, pipeline).catch((error: unknown) => {
       this.logger.error(`Execution ${execution.id} failed unexpectedly:`, error);
     });
 
@@ -124,7 +140,7 @@ export class PipelineExecutorService {
    */
   private async executeAsync(
     context: ExecutionContext,
-    pipeline: any
+    pipeline: PipelineWithActions
   ): Promise<void> {
     const { executionId, pipelineId } = context;
     const startTime = Date.now();
@@ -151,12 +167,12 @@ export class PipelineExecutorService {
         `Starting pipeline execution: ${pipeline.name}`
       );
 
-      const completedActions: Array<{
+      const completedActions: {
         id: string;
         name: string;
         status: "completed" | "failed" | "skipped";
         duration: number;
-      }> = [];
+      }[] = [];
 
       // Execute actions based on processing strategy
       if (pipeline.processingStrategy === "parallel") {
@@ -181,7 +197,7 @@ export class PipelineExecutorService {
       this.events.emitExecutionCompleted(executionId, pipelineId, completedActions);
       this.events.logInfo(
         executionId,
-        `Pipeline execution completed in ${duration}ms`
+        `Pipeline execution completed in ${String(duration)}ms`
       );
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -211,11 +227,13 @@ export class PipelineExecutorService {
    */
   private async executeSequential(
     context: ExecutionContext,
-    pipelineActions: any[],
-    completedActions: Array<{ id: string; name: string; status: any; duration: number }>
+    pipelineActions: PipelineAction[],
+    completedActions: { id: string; name: string; status: 'completed' | 'failed' | 'skipped'; duration: number }[]
   ): Promise<void> {
     for (let i = 0; i < pipelineActions.length; i++) {
       const pipelineAction = pipelineActions[i];
+      if (!pipelineAction) continue;
+      
       const action = pipelineAction.action;
 
       await this.executeAction(
@@ -234,8 +252,8 @@ export class PipelineExecutorService {
    */
   private async executeParallel(
     context: ExecutionContext,
-    pipelineActions: any[],
-    completedActions: Array<{ id: string; name: string; status: any; duration: number }>
+    pipelineActions: PipelineAction[],
+    completedActions: { id: string; name: string; status: 'completed' | 'failed' | 'skipped'; duration: number }[]
   ): Promise<void> {
     await Promise.all(
       pipelineActions.map((pipelineAction, index) =>
@@ -256,11 +274,11 @@ export class PipelineExecutorService {
    */
   private async executeAction(
     context: ExecutionContext,
-    pipelineAction: any,
-    action: any,
+    pipelineAction: PipelineAction,
+    action: Action,
     stepNumber: number,
     totalSteps: number,
-    completedActions: Array<{ id: string; name: string; status: any; duration: number }>
+    completedActions: { id: string; name: string; status: 'completed' | 'failed' | 'skipped'; duration: number }[]
   ): Promise<void> {
     const { executionId, pipelineId } = context;
     const actionStartTime = Date.now();
@@ -277,6 +295,10 @@ export class PipelineExecutorService {
           startedAt: new Date(),
         })
         .returning();
+
+      if (!executionAction) {
+        throw new Error(`Failed to create execution action for ${action.name}`);
+      }
 
       // Emit action started
       this.events.emitActionStarted(
@@ -322,7 +344,7 @@ export class PipelineExecutorService {
 
       this.events.logInfo(
         executionId,
-        `Action completed: ${action.name} (${duration}ms)`,
+        `Action completed: ${action.name} (${String(duration)}ms)`,
         executionAction.id
       );
 
@@ -364,7 +386,7 @@ export class PipelineExecutorService {
   private async simulateActionExecution(
     context: ExecutionContext,
     actionId: string,
-    action: any
+    action: Action
   ): Promise<void> {
     const { executionId } = context;
 
@@ -377,7 +399,7 @@ export class PipelineExecutorService {
         actionId,
         action.name,
         progress,
-        `Processing... ${progress}%`
+        `Processing... ${String(progress)}%`
       );
     }
   }

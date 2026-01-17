@@ -53,7 +53,7 @@ const ExecutionProgressEventSchema = z.object({
       id: z.string(),
       name: z.string(),
       status: ActionExecutionStatus,
-      startedAt: z.iso.datetime().optional(),
+      startedAt: z.date().optional(),
       progress: z.number().min(0).max(100).optional(),
       message: z.string().optional(),
     })
@@ -76,6 +76,10 @@ const ExecutionProgressEventSchema = z.object({
       stack: z.string().optional(),
     })
     .nullable(),
+
+  // Timing information
+  startedAt: z.date().optional(),
+  estimatedCompletion: z.date().optional(),
 
   timestamp: z.number().int(),
 });
