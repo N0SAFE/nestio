@@ -63,7 +63,7 @@ export default function StoragePage(): JSX.Element {
               key={bucket.name}
               name={bucket.name}
                 creationDate={new Date(bucket.creationDate)}
-              onDelete={() => { deleteBucket.mutate(bucket.name); }}
+              onDelete={() => { deleteBucket.mutate({name: bucket.name}); }}
             />
           ))}
         </div>

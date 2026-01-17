@@ -18,6 +18,7 @@ import type { ORPCAuthContext } from "./core/modules/auth/orpc/types";
 import { TestModule } from "./modules/test/test.module";
 import { StorageModule } from "./modules/storage/storage.module";
 import { OrganizationModule } from "./modules/organization/organization.module";
+import { PipelineModule } from "./modules/pipeline/pipeline.module";
 import { AuthPlugin } from "./core/modules/auth/orpc/plugins/auth.plugin";
 import { transformNestJSErrorToOrpcError, logOrpcErrors } from "./core/modules/auth/orpc/interceptors";
 
@@ -52,6 +53,7 @@ declare module "@orpc/nest" {
     PushModule,
     TestModule,
     StorageModule,
+    PipelineModule,
     ORPCModule.forRootAsync({
       useFactory: (request: Request, authService: AuthService) => {
         const emptyAuthUtils = authService.createEmptyAuthUtils();
