@@ -19,7 +19,7 @@ CREATE TABLE "action_providers" (
 	"category" text,
 	"tags" json,
 	"is_public" boolean DEFAULT false NOT NULL,
-	"owner_id" uuid,
+	"owner_id" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -30,7 +30,7 @@ CREATE TABLE "actions" (
 	"name" text NOT NULL,
 	"description" text,
 	"config" json DEFAULT '{}'::json NOT NULL,
-	"owner_id" uuid NOT NULL,
+	"owner_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -80,7 +80,7 @@ CREATE TABLE "pipeline_executions" (
 	"started_at" timestamp,
 	"completed_at" timestamp,
 	"duration_ms" integer,
-	"owner_id" uuid NOT NULL,
+	"owner_id" text NOT NULL,
 	"is_dry_run" boolean DEFAULT false NOT NULL,
 	"dry_run_result" json,
 	"created_at" timestamp DEFAULT now() NOT NULL
@@ -103,7 +103,7 @@ CREATE TABLE "pipelines" (
 	"variables_schema" json,
 	"default_variables" json DEFAULT '{}'::json,
 	"is_enabled" boolean DEFAULT true NOT NULL,
-	"owner_id" uuid NOT NULL,
+	"owner_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -113,13 +113,13 @@ CREATE TABLE "triggers" (
 	"name" text NOT NULL,
 	"description" text,
 	"type" "trigger_type" NOT NULL,
-	"bucket_id" uuid,
+	"bucket_id" text,
 	"object_key_pattern" text,
 	"cron_expression" text,
 	"timezone" text,
 	"webhook_secret" text,
 	"is_enabled" boolean DEFAULT true NOT NULL,
-	"owner_id" uuid NOT NULL,
+	"owner_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"last_triggered_at" timestamp

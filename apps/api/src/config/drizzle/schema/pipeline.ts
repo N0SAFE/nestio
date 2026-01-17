@@ -124,7 +124,7 @@ export const actionProviders = pgTable(
     
     // Permissions
     isPublic: boolean("is_public").notNull().default(false),
-    ownerId: uuid("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
     
     // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -163,7 +163,7 @@ export const actions = pgTable(
     config: json("config").notNull().default({}),
     
     // Ownership
-    ownerId: uuid("owner_id")
+    ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     
@@ -194,7 +194,7 @@ export const triggers = pgTable(
     type: triggerTypeEnum("type").notNull(),
     
     // Scope - where this trigger applies
-    bucketId: uuid("bucket_id").references(() => bucket.id, { onDelete: "cascade" }),
+    bucketId: text("bucket_id").references(() => bucket.id, { onDelete: "cascade" }),
     objectKeyPattern: text("object_key_pattern"), // Glob pattern, e.g., "*.jpg"
     
     // Schedule configuration (for scheduled triggers)
@@ -208,7 +208,7 @@ export const triggers = pgTable(
     isEnabled: boolean("is_enabled").notNull().default(true),
     
     // Ownership
-    ownerId: uuid("owner_id")
+    ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     
@@ -257,7 +257,7 @@ export const pipelines = pgTable(
     isEnabled: boolean("is_enabled").notNull().default(true),
     
     // Ownership
-    ownerId: uuid("owner_id")
+    ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     
@@ -382,7 +382,7 @@ export const pipelineExecutions = pgTable(
     durationMs: integer("duration_ms"),
     
     // Ownership
-    ownerId: uuid("owner_id")
+    ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     

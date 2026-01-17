@@ -14,7 +14,7 @@ import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import * as schema from "@/config/drizzle/schema";
 import { PipelineEventService } from "../events/pipeline-event.service";
-import type { DatabaseService } from "@/core/modules/database/services/database.service";
+import { DatabaseService } from "@/core/modules/database/services/database.service";
 
 // Type for pipeline with nested relations
 type PipelineWithActions = typeof schema.pipelines.$inferSelect & {

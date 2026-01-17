@@ -10,7 +10,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { eq, and, desc, sql, like, or } from "drizzle-orm";
 import * as schema from "@/config/drizzle/schema";
-import type { DatabaseService } from "@/core/modules/database/services/database.service";
+import { DatabaseService } from "@/core/modules/database/services/database.service";
 import { mapPipeline, mapPipelineAction, mapPipelineExecution } from "../utils/mappers";
 
 @Injectable()
