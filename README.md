@@ -1,17 +1,19 @@
-# Next.js + NestJS Monorepo Template
+# Nestio - MinIO-like S3 Object Storage API
 
-A modern, full-stack monorepo template featuring Next.js frontend, NestJS API, Shadcn UI, and TypeScript with authentication, declarative routing, and end-to-end types.
+A modern, full-stack S3-compatible object storage system featuring a NestJS backend API, Next.js web interface, and TypeScript SDK with end-to-end type safety.
 
 ## Features
 
-- 🚀 **Full-Stack Setup**: Next.js frontend + NestJS backend API
+- 🗄️ **S3-Compatible Storage**: MinIO-based object storage with bucket and object management
+- 🔐 **Secure Access**: Presigned URLs for temporary secure access to objects
+- 🚀 **Full-Stack Setup**: Next.js frontend + NestJS backend API + MinIO storage
 - 📦 **Monorepo Structure**: Organized with Turborepo for efficient development
 - 🎨 **Modern UI**: Shadcn UI components with Tailwind CSS
 - 🔐 **Authentication**: Integrated Better Auth with NestJS
-- 🛣️ **Routing**: Declarative routing system for better organization
-- 📱 **Type Safety**: Full TypeScript support across all packages with ORPC
+- 🛣️ **Type-Safe API**: ORPC contracts for end-to-end type safety
+- 📱 **SDK Support**: TypeScript SDK for easy integration
 - 🔧 **Development Tools**: ESLint, Prettier, and TypeScript configurations
-- 🤖 **AI-Ready**: Pre-configured development environment for GitHub Copilot coding agent
+- 🐳 **Docker-First**: Complete containerized development and production environments
 
 ## Prerequisites
 
@@ -67,30 +69,79 @@ A modern, full-stack monorepo template featuring Next.js frontend, NestJS API, S
    This starts:
    - Next.js at http://localhost:3000
    - NestJS API at http://localhost:3001
+   - MinIO Storage at http://localhost:9000
+   - MinIO Console at http://localhost:9001
+
+## Storage API Usage
+
+### Using the REST API
+
+```bash
+# List all buckets
+curl http://localhost:3001/storage/
+
+# Create a bucket
+curl -X POST http://localhost:3001/storage/ -H "Content-Type: application/json" -d '{"name":"my-bucket"}'
+
+# List objects in a bucket
+curl http://localhost:3001/storage/my-bucket/objects
+
+# Generate presigned upload URL
+curl -X POST http://localhost:3001/storage/my-bucket/objects/myfile.txt/presigned-upload-url
+
+# Generate presigned download URL
+curl -X POST http://localhost:3001/storage/my-bucket/objects/myfile.txt/presigned-url
+```
+
+### Using the TypeScript SDK (Coming Soon)
+
+```typescript
+import { StorageClient } from '@repo/storage-sdk';
+
+const storage = new StorageClient({
+  apiUrl: 'http://localhost:3001',
+  authToken: 'your-auth-token',
+});
+
+// Create a bucket
+await storage.createBucket('my-bucket');
+
+// Upload a file
+const uploadUrl = await storage.getPresignedUploadUrl('my-bucket', 'file.txt');
+await fetch(uploadUrl, { method: 'PUT', body: fileData });
+
+// Download a file
+const downloadUrl = await storage.getPresignedDownloadUrl('my-bucket', 'file.txt');
+```
 
 ## Project Structure
 
 ### Apps
 - `web/`: Next.js frontend application
-  - Features Shadcn UI components
+  - Storage management interface
+  - Bucket and object browser
+  - File upload/download UI
+  - Shadcn UI components
   - Better Auth integration
-  - Declarative routing system
-  - API integration with ORPC
 
 - `api/`: NestJS backend
-  - ORPC endpoints
+  - MinIO S3-compatible storage API
+  - ORPC type-safe endpoints
+  - Bucket management (create, list, delete)
+  - Object operations (upload, download, delete, list)
+  - Presigned URL generation
   - Better Auth configuration
-  - Database migrations with Drizzle ORM
   - PostgreSQL integration
 
 ### Packages
 - `ui/`: Shared React component library
-- `api-contracts/`: ORPC type-safe API contracts
+- `contracts/`: ORPC type-safe API contracts for storage operations
 - `eslint-config/`: Shared ESLint configurations
 - `prettier-config/`: Shared Prettier configurations
 - `tailwind-config/`: Shared Tailwind CSS configuration
 - `tsconfig/`: Shared TypeScript configurations
 - `types/`: Shared TypeScript types
+- `utils/env`: Centralized environment variable schemas with Zod validation
 
 ## Development Workflow
 

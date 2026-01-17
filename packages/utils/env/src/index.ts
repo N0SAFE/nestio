@@ -44,8 +44,14 @@ export const apiEnvSchema = zod.object({
     AUTH_BASE_DOMAIN: zod.string().optional(),
     DEV_AUTH_KEY: zod.string().optional(),
     DEFAULT_ADMIN_EMAIL: zod.email().optional(), // Email of the default admin user (also used for master token impersonation)
+    DEFAULT_ADMIN_PASSWORD: zod.string().optional(), // Password for the default admin user (used for credential-based auth fallback)
     TRUSTED_ORIGINS: zod.string().optional(),
     ENABLE_MASTER_TOKEN: zod.coerce.boolean().default(false),
+    
+    // Custom S3-Compatible Object Storage
+    STORAGE_ROOT_PATH: zod.string().default('/app/storage/buckets'),
+    STORAGE_MAX_FILE_SIZE: zod.coerce.number().int().default(5368709120), // 5GB (S3 limit)
+    STORAGE_MULTIPART_THRESHOLD: zod.coerce.number().int().default(104857600), // 100MB
     
     // Shared
     ...sharedEnvVars,
@@ -157,3 +163,4 @@ export type AllEnv = zod.infer<typeof allEnvSchema>
 export { trimTrailingSlash, guardedUrl, parseDebugScopes } from './utils'
 export * from './constants'
 export * from './validate'
+export * from './mock'

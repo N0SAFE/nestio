@@ -36,6 +36,20 @@
       "when": 1766860184280,
       "tag": "0004_cool_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1768213911289,
+      "tag": "0005_spooky_microchip",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768651987974,
+      "tag": "0006_steep_maverick",
+      "breakpoints": true
     }
   ]
 }

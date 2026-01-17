@@ -14,6 +14,7 @@ export const mockEnv = {
         BETTER_AUTH_SECRET: 'mock-auth-secret-key-for-development-only-change-in-production',
         DEV_AUTH_KEY: 'mock-dev-auth-key-for-development-only',
         NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+        NEXT_PUBLIC_API_URL: 'http://localhost:3001',
         DEFAULT_ADMIN_EMAIL: 'admin@admin.com',
         DEFAULT_ADMIN_PASSWORD: 'adminadmin',
     },

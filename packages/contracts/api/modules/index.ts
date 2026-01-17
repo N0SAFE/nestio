@@ -2,3 +2,6 @@ export * from './user';
 export * from './health';
 export * from './push';
 export * from './test';
+export * from './storage';
+export * from './organization';
+export * from './pipeline';

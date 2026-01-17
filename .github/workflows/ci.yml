@@ -32,8 +32,8 @@ jobs:
                   path: |
                       ~/.bun
                       node_modules
-                      apps/*/node_modules
-                      packages/*/node_modules
+                      apps/**/node_modules
+                      packages/**/node_modules
                       bun.lock
                   key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
                   restore-keys: |
@@ -48,12 +48,7 @@ jobs:
             - name: 📦 Install dependencies
               if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
-                if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
-                  echo "Dependabot PR detected: running bun install without --frozen-lockfile"
-                  bun install
-                else
-                  bun install --frozen-lockfile
-                fi
+                bun install
 
     # Job 1: Generate Declarative Routes
     generate-declarative-routes:
@@ -93,8 +88,8 @@ jobs:
                   path: |
                       ~/.bun
                       node_modules
-                      apps/*/node_modules
-                      packages/*/node_modules
+                      apps/**/node_modules
+                      packages/**/node_modules
                       bun.lock
                   key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
                   restore-keys: |
@@ -102,7 +97,9 @@ jobs:
 
             - name: 🛤️ Generate declarative routes
               if: steps.cache-declarative-routes.outputs.cache-hit != 'true'
-              run: bun run --cwd apps/web dr:build
+              run: |
+                bun run @repo-bin/declarative-routing build
+                bun run web dr:build
 
             - name: 📝 Generate OpenAPI documentation
               if: steps.cache-declarative-routes.outputs.cache-hit != 'true'
@@ -170,8 +167,8 @@ jobs:
                   path: |
                       ~/.bun
                       node_modules
-                      apps/*/node_modules
-                      packages/*/node_modules
+                      apps/**/node_modules
+                      packages/**/node_modules
                       bun.lock
                   key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
                   restore-keys: |
@@ -268,8 +265,8 @@ jobs:
                   path: |
                       ~/.bun
                       node_modules
-                      apps/*/node_modules
-                      packages/*/node_modules
+                      apps/**/node_modules
+                      packages/**/node_modules
                       bun.lock
                   key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
                   restore-keys: |
@@ -368,8 +365,8 @@ jobs:
                   path: |
                       ~/.bun
                       node_modules
-                      apps/*/node_modules
-                      packages/*/node_modules
+                      apps/**/node_modules
+                      packages/**/node_modules
                       bun.lock
                   key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
                   restore-keys: |

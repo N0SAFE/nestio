@@ -51,6 +51,7 @@ services:
             - docker/compose/docker-compose.dev.yml
         # Sync+Restart when migrations change to automatically apply them
         - action: sync+restart
+          initial_sync: true
           path: ../../..
           target: /app
           include:
@@ -72,6 +73,7 @@ services:
             - packages/**/package.json
         # Sync source code excluding node_modules and build artifacts
         - action: sync
+          initial_sync: true
           path: ../../..
           target: /app
           ignore:
@@ -121,6 +123,8 @@ services:
       - turbo_cache_dev:/root/.cache/turbo
       # Persistent uploads directory for media files
       - api_uploads_dev:/app/apps/api/uploads
+      # Persistent storage directory for custom object storage
+      - api_storage_dev:/app/storage
     environment:
       # Runtime
       - NODE_ENV=development
@@ -158,6 +162,11 @@ services:
       # Default Admin Credentials (for seeding)
       - DEFAULT_ADMIN_EMAIL=${DEFAULT_ADMIN_EMAIL:-admin@admin.com}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-adminadmin}
+      
+      # Custom Object Storage Configuration
+      - STORAGE_ROOT_PATH=/app/storage/buckets
+      - STORAGE_MAX_FILE_SIZE=5368709120
+      - STORAGE_MULTIPART_THRESHOLD=104857600
 
       # Enable seeding for mock data (development mode)
       - ENABLE_SEEDING=true
@@ -194,3 +203,5 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_turbo_cache_dev
   api_uploads_dev:
     name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_api_uploads_dev
+  api_storage_dev:
+    name: ${COMPOSE_PROJECT_NAME:-nextjs-nestjs}_api_storage_dev

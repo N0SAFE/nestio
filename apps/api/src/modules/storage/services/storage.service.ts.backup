@@ -1,0 +1,292 @@
+import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
+import * as Minio from "minio";
+import type {
+    BucketInfo,
+    ObjectInfo,
+    ObjectListResult,
+    PutObjectParams,
+    GetObjectParams,
+    ListObjectsParams,
+    DeleteObjectParams,
+    SignedUrlParams,
+    CopyObjectParams,
+    UploadResult,
+} from "../types/storage.types";
+import type { EnvService } from "@/config/env/env.service";
+
+/**
+ * StorageService - Handles MinIO/S3 object storage operations
+ *
+ * This service provides a clean interface to MinIO operations including:
+ * - Bucket management (create, list, delete, check existence)
+ * - Object operations (upload, download, delete, copy, stat)
+ * - Signed URL generation for secure temporary access
+ * - Listing objects with pagination support
+ */
+@Injectable()
+export class StorageService implements OnModuleInit {
+    private readonly logger = new Logger(StorageService.name);
+    private minioClient!: Minio.Client;
+
+    constructor(private readonly envService: EnvService) {}
+
+    onModuleInit() {
+        try {
+            const endpoint = this.envService.get("MINIO_ENDPOINT");
+            const port = this.envService.get("MINIO_PORT");
+            const useSSL = this.envService.get("MINIO_USE_SSL");
+            const accessKey = this.envService.get("MINIO_ACCESS_KEY") ?? this.envService.get("MINIO_ROOT_USER");
+            const secretKey = this.envService.get("MINIO_SECRET_KEY") ?? this.envService.get("MINIO_ROOT_PASSWORD");
+            const region = this.envService.get("STORAGE_REGION");
+
+            // Parse endpoint to extract host and port
+            const url = new URL(endpoint);
+            const endPoint = url.hostname;
+            const finalPort = port || parseInt(url.port) || (useSSL ? 443 : 80);
+
+            this.logger.log(`Initializing MinIO client with endpoint: ${endPoint}:${String(finalPort)}`);
+
+            this.minioClient = new Minio.Client({
+                endPoint,
+                port: finalPort,
+                useSSL,
+                accessKey,
+                secretKey,
+                region,
+            });
+
+            this.logger.log("MinIO client initialized successfully");
+        } catch (error) {
+            this.logger.error("Failed to initialize MinIO client", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create a new bucket
+     */
+    async createBucket(bucketName: string): Promise<void> {
+        const exists = await this.bucketExists(bucketName);
+        if (!exists) {
+            await this.minioClient.makeBucket(bucketName, this.envService.get("STORAGE_REGION"));
+            this.logger.log(`Bucket created: ${bucketName}`);
+        } else {
+            this.logger.debug(`Bucket already exists: ${bucketName}`);
+        }
+    }
+
+    /**
+     * Check if a bucket exists
+     */
+    async bucketExists(bucketName: string): Promise<boolean> {
+        try {
+            return await this.minioClient.bucketExists(bucketName);
+        } catch (error) {
+            this.logger.error(`Error checking bucket existence: ${bucketName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * List all buckets
+     */
+    async listBuckets(): Promise<BucketInfo[]> {
+        try {
+            const buckets = await this.minioClient.listBuckets();
+            return buckets.map((bucket) => ({
+                name: bucket.name,
+                creationDate: bucket.creationDate,
+            }));
+        } catch (error) {
+            this.logger.error("Error listing buckets", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a bucket (must be empty)
+     */
+    async deleteBucket(bucketName: string): Promise<void> {
+        try {
+            await this.minioClient.removeBucket(bucketName);
+            this.logger.log(`Bucket deleted: ${bucketName}`);
+        } catch (error) {
+            this.logger.error(`Error deleting bucket: ${bucketName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Upload an object to a bucket
+     */
+    async putObject(params: PutObjectParams): Promise<UploadResult> {
+        try {
+            const metadata = {
+                ...params.metadata,
+                "Content-Type": params.contentType ?? "application/octet-stream",
+            };
+
+            const result = await this.minioClient.putObject(params.bucket, params.objectName, params.data, params.size, metadata);
+
+            this.logger.debug(`Object uploaded: ${params.bucket}/${params.objectName}`);
+
+            return {
+                etag: result.etag,
+                versionId: result.versionId,
+            };
+        } catch (error) {
+            this.logger.error(`Error uploading object: ${params.bucket}/${params.objectName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get an object from a bucket (returns stream)
+     */
+    async getObject(params: GetObjectParams): Promise<NodeJS.ReadableStream> {
+        try {
+            const stream = await this.minioClient.getObject(params.bucket, params.objectName);
+            this.logger.debug(`Object retrieved: ${params.bucket}/${params.objectName}`);
+            return stream;
+        } catch (error) {
+            this.logger.error(`Error getting object: ${params.bucket}/${params.objectName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get object metadata without downloading the object
+     */
+    async statObject(bucket: string, objectName: string): Promise<ObjectInfo> {
+        try {
+            const stat = await this.minioClient.statObject(bucket, objectName);
+            return {
+                name: objectName,
+                size: stat.size,
+                etag: stat.etag,
+                lastModified: stat.lastModified,
+                contentType: stat.metaData?.["content-type"],
+                metadata: stat.metaData,
+            };
+        } catch (error) {
+            this.logger.error(`Error getting object stats: ${bucket}/${objectName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * List objects in a bucket with pagination
+     */
+    async listObjects(params: ListObjectsParams): Promise<ObjectListResult> {
+        try {
+            const objects: ObjectInfo[] = [];
+            const prefixes: string[] = [];
+            let isTruncated = false;
+
+            const stream = this.minioClient.listObjectsV2(params.bucket, params.prefix ?? "", params.recursive !== false, "");
+
+            let count = 0;
+            const maxKeys = params.maxKeys ?? 1000;
+
+            for await (const item of stream) {
+                if (count >= maxKeys) {
+                    isTruncated = true;
+                    break;
+                }
+
+                if ("prefix" in item && item.prefix) {
+                    prefixes.push(item.prefix);
+                } else if ("name" in item && item.name) {
+                    objects.push({
+                        name: item.name,
+                        size: item.size || 0,
+                        etag: item.etag || "",
+                        lastModified: item.lastModified || new Date(),
+                    });
+                }
+                count++;
+            }
+
+            this.logger.debug(`Listed ${objects.length} objects in bucket: ${params.bucket}`);
+
+            return {
+                objects,
+                prefixes,
+                isTruncated,
+            };
+        } catch (error) {
+            this.logger.error(`Error listing objects in bucket: ${params.bucket}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete an object from a bucket
+     */
+    async deleteObject(params: DeleteObjectParams): Promise<void> {
+        try {
+            await this.minioClient.removeObject(params.bucket, params.objectName);
+            this.logger.log(`Object deleted: ${params.bucket}/${params.objectName}`);
+        } catch (error) {
+            this.logger.error(`Error deleting object: ${params.bucket}/${params.objectName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete multiple objects from a bucket
+     */
+    async deleteObjects(bucket: string, objectNames: string[]): Promise<void> {
+        try {
+            await this.minioClient.removeObjects(bucket, objectNames);
+            this.logger.log(`Deleted ${objectNames.length} objects from bucket: ${bucket}`);
+        } catch (error) {
+            this.logger.error(`Error deleting objects from bucket: ${bucket}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Copy an object from one location to another
+     */
+    async copyObject(params: CopyObjectParams): Promise<void> {
+        try {
+            const copyConditions = new Minio.CopyConditions();
+            await this.minioClient.copyObject(params.destinationBucket, params.destinationObject, `/${params.sourceBucket}/${params.sourceObject}`, copyConditions);
+            this.logger.log(`Object copied from ${params.sourceBucket}/${params.sourceObject} to ${params.destinationBucket}/${params.destinationObject}`);
+        } catch (error) {
+            this.logger.error(`Error copying object from ${params.sourceBucket}/${params.sourceObject}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Generate a presigned URL for GET operations (download)
+     */
+    async getPresignedUrl(params: SignedUrlParams): Promise<string> {
+        try {
+            const expirySeconds = params.expirySeconds || 3600; // Default 1 hour
+            const url = await this.minioClient.presignedGetObject(params.bucket, params.objectName, expirySeconds);
+            this.logger.debug(`Generated presigned GET URL for: ${params.bucket}/${params.objectName}`);
+            return url;
+        } catch (error) {
+            this.logger.error(`Error generating presigned URL for: ${params.bucket}/${params.objectName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Generate a presigned URL for PUT operations (upload)
+     */
+    async getPresignedPutUrl(params: SignedUrlParams): Promise<string> {
+        try {
+            const expirySeconds = params.expirySeconds || 3600; // Default 1 hour
+            const url = await this.minioClient.presignedPutObject(params.bucket, params.objectName, expirySeconds);
+            this.logger.debug(`Generated presigned PUT URL for: ${params.bucket}/${params.objectName}`);
+            return url;
+        } catch (error) {
+            this.logger.error(`Error generating presigned PUT URL for: ${params.bucket}/${params.objectName}`, error);
+            throw error;
+        }
+    }
+}

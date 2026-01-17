@@ -1,6 +1,15 @@
 import '@testing-library/jest-dom'
 import { beforeEach, vi } from 'vitest'
 import React from 'react'
+import { getMockEnv } from '@repo/env'
+
+// Set up test environment variables BEFORE any other imports
+const mockWebEnv = getMockEnv('web')
+Object.entries(mockWebEnv).forEach(([key, value]) => {
+    process.env[key] = value
+})
+// @ts-ignore read only prop but no
+process.env.NODE_ENV = 'test'
 
 // Setup for Next.js components testing
 beforeEach(() => {
