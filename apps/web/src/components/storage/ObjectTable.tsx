@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@repo/ui/components/shadcn/dropdown-menu'
 import { File, Folder, MoreVertical, Download, Trash2 } from 'lucide-react'
-import { useDeleteObject, usePresignedGetUrl } from '@/hooks/storage/useStorage'
+import { useDeleteObject, usePresignedGetUrl } from '@/domains/storage/hooks'
 import type { JSX } from 'react'
 
 interface StorageObject {

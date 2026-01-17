@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import { useObjects } from '@/hooks/storage/useStorage'
+import { useObjects } from '@/domains/storage/hooks'
 import { ObjectTable } from '@/components/storage/ObjectTable'
 import { FileUploadDialog } from '@/components/storage/FileUploadDialog'
 import { Button } from '@repo/ui/components/shadcn/button'

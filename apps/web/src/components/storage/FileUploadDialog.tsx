@@ -12,7 +12,7 @@ import {
 import { Button } from '@repo/ui/components/shadcn/button'
 import { Progress } from '@repo/ui/components/shadcn/progress'
 import { Upload, X, File as FileIcon } from 'lucide-react'
-import { useFileUpload } from '@/hooks/storage/useStorage'
+import { useFileUpload } from '@/domains/storage/hooks'
 import { cn } from '@repo/ui/lib/utils'
 import type { JSX } from 'react'
 
@@ -64,17 +64,12 @@ export function FileUploadDialog({
         await upload.mutateAsync({
           bucket,
           file: currentFile.file,
-          onProgress: (progress) => {
-            const percent = progress.percent ?? ((progress.loaded / (progress.total ?? 1)) * 100)
-            setFiles((prev) =>
-              prev.map((f, idx) => (idx === i ? { ...f, progress: percent } : f))
-            )
-          },
+          objectName: path ? `${path.replace(/\/+$/, '')}/${currentFile.file.name}` : currentFile.file.name,
         })
 
         // Update status to completed
         setFiles((prev) =>
-          prev.map((f, idx) => (idx === i ? { ...f, status: 'completed' as const } : f))
+          prev.map((f, idx) => (idx === i ? { ...f, status: 'completed' as const, progress: 100 } : f))
         )
       } catch {
         // Update status to error

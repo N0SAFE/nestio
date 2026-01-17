@@ -14,7 +14,7 @@ import { Button } from '@repo/ui/components/shadcn/button'
 import { Input } from '@repo/ui/components/shadcn/input'
 import { Label } from '@repo/ui/components/shadcn/label'
 import { PlusCircle } from 'lucide-react'
-import { useCreateBucket } from '@/hooks/storage/useStorage'
+import { useCreateBucket } from '@/domains/storage/hooks'
 import type { JSX } from 'react'
 
 export function CreateBucketDialog(): JSX.Element {
@@ -25,7 +25,7 @@ export function CreateBucketDialog(): JSX.Element {
   const handleCreate = async () => {
     if (!bucketName.trim()) return
     
-    await createBucket.mutateAsync(bucketName.trim())
+    await createBucket.mutateAsync({ name: bucketName.trim() })
     setBucketName('')
     setOpen(false)
   }

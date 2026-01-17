@@ -1,6 +1,6 @@
 'use client'
 
-import { useBuckets, useDeleteBucket } from '@/hooks/storage/useStorage'
+import { useBuckets, useDeleteBucket } from '@/domains/storage/hooks'
 import { BucketCard } from '@/components/storage/BucketCard'
 import { CreateBucketDialog } from '@/components/storage/CreateBucketDialog'
 import { Loader2, Database } from 'lucide-react'
