@@ -14,7 +14,7 @@ import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import * as schema from "@/config/drizzle/schema";
 import { PipelineEventService } from "../events/pipeline-event.service";
-import { DatabaseService } from "@/core/modules/database/services/database.service";
+import type { DatabaseService } from "@/core/modules/database/services/database.service";
 
 // Type for pipeline with nested relations
 type PipelineWithActions = typeof schema.pipelines.$inferSelect & {
@@ -230,20 +230,19 @@ export class PipelineExecutorService {
     pipelineActions: PipelineAction[],
     completedActions: { id: string; name: string; status: 'completed' | 'failed' | 'skipped'; duration: number }[]
   ): Promise<void> {
-    for (let i = 0; i < pipelineActions.length; i++) {
-      const pipelineAction = pipelineActions[i];
-      if (!pipelineAction) continue;
-      
+    let stepNumber = 1;
+    for (const pipelineAction of pipelineActions) {
       const action = pipelineAction.action;
 
       await this.executeAction(
         context,
         pipelineAction,
         action,
-        i + 1,
+        stepNumber,
         pipelineActions.length,
         completedActions
       );
+      stepNumber++;
     }
   }
 

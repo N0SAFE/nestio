@@ -12,13 +12,16 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/flow": "*",
     "fumadocs-core": "catalog:doc",
     "fumadocs-mdx": "catalog:doc",
     "fumadocs-ui": "catalog:doc",
     "lucide-react": "catalog:ui",
     "next": "catalog:next",
     "react": "catalog:react",
-    "react-dom": "catalog:react"
+    "react-dom": "catalog:react",
+    "reactflow": "^11.11.0",
+    "zustand": "catalog:utils"
   },
   "devDependencies": {
     "@repo-configs/eslint": "*",

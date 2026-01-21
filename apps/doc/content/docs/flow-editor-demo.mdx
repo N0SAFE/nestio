@@ -1,0 +1,37 @@
+---
+title: Flow Editor Demo
+description: Interactive demo of the Flow Editor UI
+---
+
+import { FlowEditorDemo } from '@/components/flow-editor-demo';
+
+# Flow Editor Demo
+
+This is a live demo of the Flow Editor component from `@repo/flow`.
+
+<FlowEditorDemo />
+
+## Features
+
+- **Visual Flow Editor**: Drag and drop nodes to create workflows
+- **Node Palette**: Browse and add different plugin nodes
+- **Property Panel**: Configure node settings
+- **Variable Inspector**: View and edit flow variables
+- **Execution Controls**: Run, pause, and stop flows
+
+## Usage
+
+```tsx
+import { ReactFlowProvider } from 'reactflow';
+import { FlowEditor } from '@repo/flow/ui';
+import 'reactflow/dist/style.css';
+import '@repo/flow/ui/styles.css';
+
+function MyApp() {
+  return (
+    <ReactFlowProvider>
+      <FlowEditor />
+    </ReactFlowProvider>
+  );
+}
+```

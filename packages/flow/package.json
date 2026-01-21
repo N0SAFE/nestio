@@ -1,0 +1,71 @@
+{
+  "name": "@repo/flow",
+  "version": "0.1.0",
+  "description": "Visual flow builder using React Flow for creating complex, plugin-based workflow automation",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": ["./src/index.ts", "./src/index.tsx"],
+      "import": "./dist/index.js"
+    },
+    "./ui": {
+      "types": ["./src/ui/index.ts", "./src/ui/index.tsx"],
+      "import": "./dist/ui/index.js"
+    },
+    "./plugins": {
+      "types": ["./src/plugins/index.ts", "./src/plugins/index.tsx"],
+      "import": "./dist/plugins/index.js"
+    },
+    "./*": {
+      "types": ["./src/*.ts", "./src/*.tsx"],
+      "import": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "bun scripts/build.ts",
+    "dev": "bun scripts/build.ts --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@repo/types": "*",
+    "@repo/ui": "*",
+    "lucide-react": "catalog:ui",
+    "nanoid": "catalog:database",
+    "@xyflow/react": "^12.10.0",
+    "zod": "catalog:utils",
+    "zustand": "catalog:utils"
+  },
+  "devDependencies": {
+    "@repo-configs/eslint": "*",
+    "eslint": "catalog:linting",
+    "@repo-configs/typescript": "*",
+    "@repo-configs/vitest": "*",
+    "@testing-library/react": "catalog:testing",
+    "@types/node": "catalog:build",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "tsup": "^8.5.0",
+    "typescript": "catalog:build",
+    "vitest": "catalog:testing"
+  },
+  "peerDependencies": {
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "keywords": [
+    "flow",
+    "workflow",
+    "visual-programming",
+    "react-flow",
+    "automation",
+    "plugins"
+  ],
+  "author": "Nestio Team",
+  "license": "MIT"
+}

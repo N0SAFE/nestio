@@ -82,7 +82,7 @@ function getSharedConfig(format: "esm" | "cjs", outDir: string) {
         outDir,
         format: [format],
         target: "es2020" as const,
-        external: ["react"],
+        external: ["react", "@xyflow/react"],
         treeshake: true,
         sourcemap: true,
         clean: false,
