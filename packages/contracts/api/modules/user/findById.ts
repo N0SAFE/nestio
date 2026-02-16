@@ -7,8 +7,8 @@ const userOps = standard(userSchema, "user");
 // Create read contract using builder
 export const userFindByIdContract = userOps
   .read()
-  .outputBuilder.nullable()
+  .output.nullable()
   .build()
   
-  type i = typeof userFindByIdContract['~orpc']["inputSchema"];
-  type o = typeof userFindByIdContract['~orpc']["outputSchema"];
+// type i = typeof userFindByIdContract['~orpc']["inputSchema"];
+// type o = typeof userFindByIdContract['~orpc']["outputSchema"];

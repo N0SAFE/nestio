@@ -173,6 +173,38 @@ export class StorageRepository {
     }
 
     /**
+     * Create a new object and return it
+     */
+    async createObject(params: {
+        bucketId: string;
+        key: string;
+        size: number;
+        etag: string;
+        contentType?: string;
+        metadata?: Record<string, string>;
+    }): Promise<InferSelectModel<typeof schema.object>> {
+        const db = this.databaseService.db;
+        
+        const id = crypto.randomUUID();
+        await db.insert(schema.object).values({
+            id,
+            bucketId: params.bucketId,
+            key: params.key,
+            size: params.size,
+            etag: params.etag,
+            contentType: params.contentType ?? 'application/octet-stream',
+            metadata: params.metadata ?? {},
+        });
+
+        // Return the created object
+        const created = await this.findObjectByKey(params.bucketId, params.key);
+        if (!created) {
+            throw new Error('Failed to create object');
+        }
+        return created;
+    }
+
+    /**
      * Find an object by key
      */
     async findObjectByKey(bucketId: string, key: string): Promise<InferSelectModel<typeof schema.object> | null> {
@@ -232,5 +264,102 @@ export class StorageRepository {
     async deleteAllObjectsInBucket(bucketId: string): Promise<void> {
         const db = this.databaseService.db;
         await db.delete(schema.object).where(eq(schema.object.bucketId, bucketId));
+    }
+
+    // ==================== Multipart Upload Operations ====================
+
+    /**
+     * Create a new multipart upload session
+     */
+    async createMultipartUpload(params: {
+        bucketId: string;
+        key: string;
+        uploadId: string;
+        contentType?: string;
+        metadata?: Record<string, string>;
+    }): Promise<void> {
+        const db = this.databaseService.db;
+        await db.insert(schema.multipartUpload).values({
+            id: crypto.randomUUID(),
+            uploadId: params.uploadId,
+            bucketId: params.bucketId,
+            key: params.key,
+            contentType: params.contentType,
+            metadata: params.metadata,
+        });
+    }
+
+    /**
+     * Find a multipart upload by uploadId
+     */
+    async findMultipartUpload(uploadId: string): Promise<{
+        id: string;
+        uploadId: string;
+        bucketId: string;
+        key: string;
+        contentType: string | null;
+    } | null> {
+        const db = this.databaseService.db;
+        const uploads = await db
+            .select()
+            .from(schema.multipartUpload)
+            .where(eq(schema.multipartUpload.uploadId, uploadId))
+            .limit(1);
+
+        return uploads[0] ?? null;
+    }
+
+    /**
+     * Add a part to a multipart upload
+     */
+    async addMultipartPart(params: {
+        uploadId: string;
+        partNumber: number;
+        size: number;
+        etag: string;
+    }): Promise<void> {
+        const db = this.databaseService.db;
+        await db.insert(schema.multipartUploadPart).values({
+            id: crypto.randomUUID(),
+            uploadId: params.uploadId,
+            partNumber: params.partNumber,
+            size: params.size,
+            etag: params.etag,
+        });
+    }
+
+    /**
+     * Get all parts for a multipart upload
+     */
+    async getMultipartParts(uploadId: string): Promise<{
+        partNumber: number;
+        size: number;
+        etag: string;
+        uploadedAt: Date;
+    }[]> {
+        const db = this.databaseService.db;
+        const parts = await db
+            .select({
+                partNumber: schema.multipartUploadPart.partNumber,
+                size: schema.multipartUploadPart.size,
+                etag: schema.multipartUploadPart.etag,
+                uploadedAt: schema.multipartUploadPart.uploadedAt,
+            })
+            .from(schema.multipartUploadPart)
+            .where(eq(schema.multipartUploadPart.uploadId, uploadId))
+            .orderBy(schema.multipartUploadPart.partNumber);
+
+        return parts;
+    }
+
+    /**
+     * Delete a multipart upload and all its parts
+     */
+    async deleteMultipartUpload(uploadId: string): Promise<void> {
+        const db = this.databaseService.db;
+        // Parts will be deleted via cascade
+        await db
+            .delete(schema.multipartUpload)
+            .where(eq(schema.multipartUpload.uploadId, uploadId));
     }
 }

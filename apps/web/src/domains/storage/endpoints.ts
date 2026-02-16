@@ -14,22 +14,22 @@ export const storageEndpoints = {
   /**
    * List all buckets
    */
-  bucketList: orpc.storage.bucketList,
+  bucketList: orpc.storage.bucket.list,
   
   /**
    * Create a new bucket
    */
-  bucketCreate: orpc.storage.bucketCreate,
+  bucketCreate: orpc.storage.bucket.create,
   
   /**
    * Delete a bucket (must be empty)
    */
-  bucketDelete: orpc.storage.bucketDelete,
+  bucketDelete: orpc.storage.bucket.delete,
   
   /**
    * Check if a bucket exists
    */
-  bucketExists: orpc.storage.bucketExists,
+  bucketExists: orpc.storage.bucket.exists,
   
   // =============================================================================
   // Object Operations
@@ -38,32 +38,32 @@ export const storageEndpoints = {
   /**
    * List objects in a bucket with optional prefix filtering
    */
-  objectList: orpc.storage.objectList,
+  objectList: orpc.storage.object.list,
   
   /**
    * Get object metadata (stat)
    */
-  objectStat: orpc.storage.objectStat,
+  objectStat: orpc.storage.object.stat,
   
   /**
    * Upload an object (file)
    */
-  objectUpload: orpc.storage.objectUpload,
+  objectUpload: orpc.storage.object.upload,
   
   /**
    * Delete an object
    */
-  objectDelete: orpc.storage.objectDelete,
+  objectDelete: orpc.storage.object.delete,
   
   /**
    * Generate presigned GET URL for secure download
    */
-  objectPresignedGetUrl: orpc.storage.objectPresignedGetUrl,
+  objectPresignedGetUrl: orpc.storage.object.presignedGetUrl,
   
   /**
    * Generate presigned PUT URL for secure upload
    */
-  objectPresignedPutUrl: orpc.storage.objectPresignedPutUrl,
+  objectPresignedPutUrl: orpc.storage.object.presignedPutUrl,
 } as const
 
 export type StorageEndpoints = typeof storageEndpoints

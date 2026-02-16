@@ -52,7 +52,9 @@ describe('EventEmitter', () => {
     });
 
     it('should handle events with no handlers gracefully', () => {
-      expect(() => emitter.emit('nonexistent')).not.toThrow();
+      expect(() => {
+        emitter.emit('nonexistent');
+      }).not.toThrow();
     });
   });
 
@@ -125,12 +127,16 @@ describe('EventEmitter', () => {
 
     it('should handle removing non-existent handler gracefully', () => {
       const handler = vi.fn();
-      expect(() => emitter.off('test', handler)).not.toThrow();
+      expect(() => {
+        emitter.off('test', handler);
+      }).not.toThrow();
     });
 
     it('should handle removing handler for non-existent event', () => {
       const handler = vi.fn();
-      expect(() => emitter.off('nonexistent', handler)).not.toThrow();
+      expect(() => {
+        emitter.off('nonexistent', handler);
+      }).not.toThrow();
     });
   });
 
@@ -185,9 +191,9 @@ describe('EventEmitter', () => {
     });
 
     it('should return correct count for event with handlers', () => {
-      emitter.on('test', () => {});
-      emitter.on('test', () => {});
-      emitter.on('test', () => {});
+      emitter.on('test', () => undefined);
+      emitter.on('test', () => undefined);
+      emitter.on('test', () => undefined);
       
       expect(emitter.listenerCount('test')).toBe(3);
     });
@@ -195,16 +201,16 @@ describe('EventEmitter', () => {
     it('should update count after adding handlers', () => {
       expect(emitter.listenerCount('test')).toBe(0);
       
-      emitter.on('test', () => {});
+      emitter.on('test', () => undefined);
       expect(emitter.listenerCount('test')).toBe(1);
       
-      emitter.on('test', () => {});
+      emitter.on('test', () => undefined);
       expect(emitter.listenerCount('test')).toBe(2);
     });
 
     it('should update count after removing handlers', () => {
-      const handler1 = () => {};
-      const handler2 = () => {};
+      const handler1 = () => undefined;
+      const handler2 = () => undefined;
       
       emitter.on('test', handler1);
       emitter.on('test', handler2);
@@ -221,9 +227,9 @@ describe('EventEmitter', () => {
     });
 
     it('should return all registered event names', () => {
-      emitter.on('event1', () => {});
-      emitter.on('event2', () => {});
-      emitter.on('event3', () => {});
+      emitter.on('event1', () => undefined);
+      emitter.on('event2', () => undefined);
+      emitter.on('event3', () => undefined);
       
       const names = emitter.eventNames();
       expect(names).toContain('event1');
@@ -233,17 +239,17 @@ describe('EventEmitter', () => {
     });
 
     it('should not duplicate event names', () => {
-      emitter.on('test', () => {});
-      emitter.on('test', () => {});
-      emitter.on('test', () => {});
+      emitter.on('test', () => undefined);
+      emitter.on('test', () => undefined);
+      emitter.on('test', () => undefined);
       
       const names = emitter.eventNames();
       expect(names).toEqual(['test']);
     });
 
     it('should update after clearing events', () => {
-      emitter.on('event1', () => {});
-      emitter.on('event2', () => {});
+      emitter.on('event1', () => undefined);
+      emitter.on('event2', () => undefined);
       
       emitter.clear('event1');
       
@@ -259,7 +265,7 @@ describe('EventEmitter', () => {
       const handler2 = vi.fn();
       
       // Mock console.error to avoid test output pollution
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       
       emitter.on('test', handler1);
       emitter.on('test', handler2);
@@ -275,7 +281,7 @@ describe('EventEmitter', () => {
     it('should log errors from handlers', () => {
       const error = new Error('Test error');
       const handler = vi.fn(() => { throw error; });
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       
       emitter.on('test', handler);
       emitter.emit('test');

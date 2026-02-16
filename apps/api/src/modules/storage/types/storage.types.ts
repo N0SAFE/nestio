@@ -44,6 +44,27 @@ export interface PutObjectParams {
 export interface GetObjectParams {
   bucket: string;
   objectName: string;
+  /** Optional Range header value (e.g., "bytes=0-1023") */
+  range?: string;
+}
+
+export interface GetObjectResult {
+  /** Object data (full or partial based on range) */
+  data: Buffer;
+  /** Content type */
+  contentType: string;
+  /** Total file size */
+  size: number;
+  /** ETag for cache validation */
+  etag: string;
+  /** HTTP status code (200 for full, 206 for partial) */
+  statusCode: 200 | 206;
+  /** Content-Range header value (for 206 responses) */
+  contentRange?: string;
+  /** Accept-Ranges header value */
+  acceptRanges: string;
+  /** Content-Length (actual bytes returned) */
+  contentLength: number;
 }
 
 export interface ListObjectsParams {
@@ -64,4 +85,23 @@ export interface CopyObjectParams {
   sourceObject: string;
   destinationBucket: string;
   destinationObject: string;
+}
+
+/**
+ * Presigned URL token payload
+ * This is signed with HMAC-SHA256 for security
+ */
+export interface PresignedTokenPayload {
+  /** Bucket name */
+  bucket: string;
+  /** Object key */
+  key: string;
+  /** Operation type: GET for download, PUT for upload */
+  operation: "GET" | "PUT";
+  /** Expiry timestamp in milliseconds */
+  expires: number;
+  /** Optional content type for PUT operations */
+  contentType?: string;
+  /** Optional max file size for PUT operations */
+  maxSize?: number;
 }

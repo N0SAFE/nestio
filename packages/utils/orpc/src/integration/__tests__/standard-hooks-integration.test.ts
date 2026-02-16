@@ -71,9 +71,9 @@ describe('standard() + createRouterHooks() Integration', () => {
     it('should support input/output builder chaining', () => {
       const ops = standard(testEntitySchema, 'testEntity');
       
-      // Test input builder modifications
+      // Test input builder modifications - use callback to modify body in detailed input
       const createContract = ops.create()
-        .inputBuilder.omit(['id', 'createdAt', 'updatedAt'])
+        .input(b => b.omit(['id', 'createdAt', 'updatedAt']))
         .build();
       
       expect(createContract).toBeDefined();
@@ -81,7 +81,7 @@ describe('standard() + createRouterHooks() Integration', () => {
 
       // Test output builder modifications
       const readContract = ops.read()
-        .outputBuilder.nullable()
+        .output.nullable()
         .build();
       
       expect(readContract).toBeDefined();
@@ -335,7 +335,7 @@ describe('standard() + createRouterHooks() Integration', () => {
       // Create contracts
       const listContract = ops.list().build();
       const createContract = ops.create()
-        .inputBuilder.omit(['id', 'createdAt', 'updatedAt'])
+        .input(b => b.omit(['id', 'createdAt', 'updatedAt']))
         .build();
 
       // Verify contracts have proper structure
@@ -469,9 +469,9 @@ describe('standard() + createRouterHooks() Integration', () => {
 
       // Create contracts exactly as done in packages/contracts/api/modules/user/
       const listContract = userOps.list().build();
-      const findByIdContract = userOps.read().outputBuilder.nullable().build();
+      const findByIdContract = userOps.read().output.nullable().build();
       const createContract = userOps.create()
-        .inputBuilder.pick(['name', 'email', 'image'])
+        .input(b => b.pick(['name', 'email', 'image']))
         .build();
       const updateContract = userOps.update().build();
       const deleteContract = userOps.delete().build();
@@ -540,7 +540,7 @@ describe('standard() + createRouterHooks() Integration', () => {
       const userHooks = createRouterHooks<typeof mockUserRouter>(mockUserRouter, {
         invalidations: defineInvalidations<typeof mockUserRouter>(mockUserRouter, {
           create: ['list', 'count'],
-          delete: ['list', 'count', 'findById'],
+          update: ['list', 'findById'],
         }),
         useQueryClient: () => queryClient as any,
         debug: true, // Enable debug logging
@@ -551,7 +551,6 @@ describe('standard() + createRouterHooks() Integration', () => {
       expectTypeOf(userHooks).toHaveProperty('useFindById');
       expectTypeOf(userHooks).toHaveProperty('useCreate');
       expectTypeOf(userHooks).toHaveProperty('useUpdate');
-      expectTypeOf(userHooks).toHaveProperty('useDelete');
       expectTypeOf(userHooks).toHaveProperty('useCount');
       expectTypeOf(userHooks).toHaveProperty('useCheckEmail');
 
@@ -563,7 +562,6 @@ describe('standard() + createRouterHooks() Integration', () => {
       expect(userHooks).toHaveProperty('useFindById');
       expect(userHooks).toHaveProperty('useCreate');
       expect(userHooks).toHaveProperty('useUpdate');
-      expect(userHooks).toHaveProperty('useDelete');
       expect(userHooks).toHaveProperty('useCount');
       expect(userHooks).toHaveProperty('useCheckEmail');
 

@@ -138,11 +138,7 @@ export const testEntityStreamingListContract = testOps
  * - Live mode: Always shows the current state of the entity
  * - Streamed mode: Accumulates history of entity states/changes
  */
-export const testEntityStreamingReadContract = testOps
-  .streamingRead({
-    path: "/{id}/streaming",
-  })
-  .build();
+export const testEntityStreamingReadContract = testOps.streamingRead().build();
 export type TestEntityStreamingReadInput = { id: string };
 export type TestEntityStreamingReadOutput = z.infer<typeof testEntitySchema>;
 

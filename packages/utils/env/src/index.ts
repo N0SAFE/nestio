@@ -52,6 +52,7 @@ export const apiEnvSchema = zod.object({
     STORAGE_ROOT_PATH: zod.string().default('/app/storage/buckets'),
     STORAGE_MAX_FILE_SIZE: zod.coerce.number().int().default(5368709120), // 5GB (S3 limit)
     STORAGE_MULTIPART_THRESHOLD: zod.coerce.number().int().default(104857600), // 100MB
+    STORAGE_SECRET_KEY: zod.string().min(32, 'STORAGE_SECRET_KEY must be at least 32 characters for security'),
     
     // Shared
     ...sharedEnvVars,

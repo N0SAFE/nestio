@@ -51,6 +51,15 @@ export class FilesystemUtils {
     }
 
     /**
+     * Create a directory within a bucket (for multipart uploads, etc.)
+     */
+    async createDirectory(bucketName: string, subPath: string): Promise<void> {
+        const dirPath = path.join(this.storagePath, bucketName, subPath);
+        await this.ensureDirectory(dirPath);
+        this.logger.debug(`Directory created: ${bucketName}/${subPath}`);
+    }
+
+    /**
      * Write an object to the filesystem
      */
     async writeObject(bucketName: string, objectKey: string, data: Buffer): Promise<void> {
@@ -77,6 +86,44 @@ export class FilesystemUtils {
                 throw new Error(`Object not found: ${bucketName}/${objectKey}`);
             }
             this.logger.error(`Failed to read object: ${bucketName}/${objectKey}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Read a specific range of bytes from an object
+     * Used for HTTP range requests (partial content)
+     */
+    async readObjectRange(
+        bucketName: string,
+        objectKey: string,
+        start: number,
+        end: number
+    ): Promise<Buffer> {
+        const objectPath = this.getObjectPath(bucketName, objectKey);
+        
+        try {
+            // Open file for reading
+            const fileHandle = await fs.open(objectPath, "r");
+            
+            try {
+                // Calculate how many bytes to read
+                const length = end - start + 1;
+                const buffer = Buffer.alloc(length);
+                
+                // Read the specified range
+                await fileHandle.read(buffer, 0, length, start);
+                
+                return buffer;
+            } finally {
+                // Always close the file handle
+                await fileHandle.close();
+            }
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+                throw new Error(`Object not found: ${bucketName}/${objectKey}`);
+            }
+            this.logger.error(`Failed to read object range: ${bucketName}/${objectKey}`, error);
             throw error;
         }
     }

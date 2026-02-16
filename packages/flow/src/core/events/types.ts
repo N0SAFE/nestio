@@ -8,7 +8,7 @@ import type { ExecutionContext } from '../types/context';
 /**
  * Event handler function
  */
-export type EventHandler = (data: any) => void;
+export type EventHandler = (data: unknown) => void;
 
 /**
  * Flow execution events
@@ -16,7 +16,7 @@ export type EventHandler = (data: any) => void;
 export interface FlowEvent {
   type: string;
   timestamp: Date;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface EdgeEvent extends FlowEvent {
 export interface VariableEvent extends FlowEvent {
   type: 'variable:set' | 'variable:get' | 'variable:delete';
   name: string;
-  value?: any;
+  value?: unknown;
 }
 
 /**

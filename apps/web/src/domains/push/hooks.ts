@@ -15,6 +15,37 @@ import { wrapWithInvalidations } from '../shared/helpers'
 const enhancedPush = wrapWithInvalidations(pushEndpoints, pushInvalidations)
 
 // ============================================================================
+// BROWSER API HOOKS - Client-side push notification support detection
+// ============================================================================
+
+/**
+ * Hook to check if push notifications are supported in the browser.
+ * Checks for Service Worker, PushManager, and Notification API support.
+ * @returns true if push notifications are fully supported
+ * @example const isSupported = usePushNotificationSupport()
+ */
+export function usePushNotificationSupport(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    'serviceWorker' in navigator &&
+    'PushManager' in window &&
+    'Notification' in window
+  )
+}
+
+/**
+ * Hook to get the current notification permission state.
+ * @returns 'granted', 'denied', 'default', or 'unsupported'
+ * @example const permission = useNotificationPermission()
+ */
+export function useNotificationPermission(): NotificationPermission | 'unsupported' {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return 'unsupported'
+  }
+  return Notification.permission
+}
+
+// ============================================================================
 // QUERY HOOKS (Read Operations)
 // ============================================================================
 
@@ -107,32 +138,30 @@ export function usePushActions() {
 
 /**
  * Combined hook for complete push notification management
+ * Provides a complete interface for push notification features.
+ * @example const push = usePushNotifications()
  */
 export function usePushNotifications() {
+  const isSupported = usePushNotificationSupport()
+  const permission = useNotificationPermission()
   const publicKey = usePushPublicKey()
   const subscriptions = usePushSubscriptions()
   const stats = usePushStats()
-  const actions = usePushActions()
+  const subscribe = usePushSubscribe()
+  const unsubscribe = usePushUnsubscribe()
+  const sendTest = useSendTestNotification()
 
   return {
-    publicKey: publicKey.data,
-    subscriptions: subscriptions.data,
-    stats: stats.data,
+    // Browser API state
+    isSupported,
+    permission,
     
-    isLoading: {
-      publicKey: publicKey.isLoading,
-      subscriptions: subscriptions.isLoading,
-      stats: stats.isLoading,
-      ...actions.isLoading,
-    },
-    
-    errors: {
-      publicKey: publicKey.error,
-      subscriptions: subscriptions.error,
-      stats: stats.error,
-      ...actions.errors,
-    },
-    
-    actions,
+    // Server hooks - Compatible with legacy API
+    publicKey,
+    subscriptions,
+    stats,
+    subscribe,
+    unsubscribe,
+    sendTest,
   }
 }

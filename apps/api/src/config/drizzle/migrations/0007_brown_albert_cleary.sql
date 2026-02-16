@@ -1,0 +1,1 @@
+CREATE INDEX "multipart_expires_at_idx" ON "multipart_upload" USING btree ("expires_at");

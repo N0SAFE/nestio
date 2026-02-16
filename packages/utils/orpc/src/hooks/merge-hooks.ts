@@ -44,8 +44,7 @@
  * Type for query key factory functions
  * Each key factory returns a readonly tuple representing a query key
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type QueryKeyFactory = (...args: any[]) => readonly unknown[]
+export type QueryKeyFactory = (...args: readonly unknown[]) => readonly unknown[]
 
 /**
  * Type for a keys object containing query key factories
@@ -55,8 +54,7 @@ export type QueryKeys = Record<string, QueryKeyFactory>
 /**
  * Type for custom hook definitions
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type CustomHooks = Record<string, (...args: any[]) => any>
+export type CustomHooks = Record<string, (...args: readonly unknown[]) => unknown>
 
 /**
  * Extract keys type from a hooks object (router or custom)

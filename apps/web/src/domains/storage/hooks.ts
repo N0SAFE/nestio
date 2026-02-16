@@ -39,7 +39,7 @@ export function useBuckets() {
 export function useBucketExists(bucketName: string, options?: { enabled?: boolean }) {
   return useQuery(
     storageEndpoints.bucketExists.queryOptions({ 
-      input: { name: bucketName },
+      input: { params: { name: bucketName } },
       enabled: options?.enabled ?? !!bucketName,
     }),
   );
@@ -107,7 +107,7 @@ export function useCreateBucket() {
   return useMutation(
     storageEndpoints.bucketCreate.mutationOptions({
       onSuccess: enhancedStorage.bucketCreate.withInvalidationOnSuccess((data, variables) => {
-        toast.success(`Bucket "${variables.name}" created successfully`);
+        toast.success(`Bucket "${variables.body.name}" created successfully`);
       }),
       onError: (error: Error) => {
         toast.error(`Failed to create bucket: ${error.message}`);
@@ -129,7 +129,7 @@ export function useDeleteBucket() {
   return useMutation(
     storageEndpoints.bucketDelete.mutationOptions({
       onSuccess: enhancedStorage.bucketDelete.withInvalidationOnSuccess((data, variables) => {
-        toast.success(`Bucket "${variables.name}" deleted successfully`);
+        toast.success(`Bucket "${variables.params.name}" deleted successfully`);
       }),
       onError: (error: Error) => {
         toast.error(`Failed to delete bucket: ${error.message}`);

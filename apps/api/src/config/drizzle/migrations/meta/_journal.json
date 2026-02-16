@@ -50,6 +50,13 @@
       "when": 1768651987974,
       "tag": "0006_steep_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769026335284,
+      "tag": "0007_brown_albert_cleary",
+      "breakpoints": true
     }
   ]
 }

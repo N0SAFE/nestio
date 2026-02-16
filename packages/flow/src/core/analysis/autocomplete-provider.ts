@@ -340,7 +340,10 @@ export class AutocompleteProvider {
     const lowerQuery = query.toLowerCase();
 
     // Find the base variable
-    const baseVarName = basePath.split('.')[0]!;
+    const [baseVarName] = basePath.split('.');
+    if (!baseVarName) {
+      return suggestions;
+    }
     const baseVariable = this.variables.find(v => v.name === baseVarName);
 
     if (!baseVariable) {
@@ -497,10 +500,10 @@ export class AutocompleteProvider {
 
     for (const match of matches) {
       const expr = match.slice(2, -2).trim();
-      const varMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*)/);
+      const varMatch = /^([a-zA-Z_][a-zA-Z0-9_]*)/.exec(expr);
 
-      if (varMatch) {
-        const varName = varMatch[1]!;
+      if (varMatch?.[1]) {
+        const varName = varMatch[1];
         const variable = this.variables.find(v => v.name === varName);
 
         if (!variable) {

@@ -33,7 +33,7 @@ describe('FlowExecutor Integration Tests', () => {
       nodeType: 'trigger',
       configSchema: z.object({}),
       nodeUIPattern: 'clickable',
-      execute: async (context) => {
+      execute: (context) => {
         context.logger.info('Flow started');
         return { success: true, data: { started: true } };
       },
@@ -51,7 +51,7 @@ describe('FlowExecutor Integration Tests', () => {
         value: z.unknown(),
       }),
       nodeUIPattern: 'clickable',
-      execute: async (context, config) => {
+      execute: (context, config) => {
         const { name, value } = config as { name: string; value: unknown };
         // CORRECT API: context.variables.set() not context.setVariable()
         context.variables.set(name, value);
@@ -71,7 +71,7 @@ describe('FlowExecutor Integration Tests', () => {
         message: z.string(),
       }),
       nodeUIPattern: 'clickable',
-      execute: async (context, config) => {
+      execute: (context, config) => {
         const { message } = config as { message: string };
         context.logger.info(message);
         return { success: true, data: { logged: message } };
@@ -327,7 +327,7 @@ describe('FlowExecutor Integration Tests', () => {
         nodeType: 'action',
         configSchema: z.object({}),
         nodeUIPattern: 'clickable',
-        execute: async () => {
+        execute: () => {
           throw new Error('Intentional test error');
         },
       });

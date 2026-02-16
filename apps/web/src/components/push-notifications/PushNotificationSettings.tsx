@@ -6,7 +6,7 @@ import {
   usePushNotifications,
   usePushNotificationSupport,
   useNotificationPermission,
-} from '@/hooks/usePush'
+} from '@/domains/push/hooks'
 import { Button } from '@repo/ui/components/shadcn/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/components/shadcn/card'
 import { Bell, BellOff, Send } from 'lucide-react'

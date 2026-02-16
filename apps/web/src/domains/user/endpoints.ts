@@ -45,4 +45,38 @@ export const userEndpoints = {
 
 export type UserEndpoints = typeof userEndpoints
 
-orpc.user.count.queryKey()
+// ============================================================================
+// QUERY KEYS
+// ============================================================================
+
+/**
+ * User domain query keys for cache management
+ * 
+ * Uses simple array-based keys compatible with TanStack Query's prefix matching.
+ * 
+ * @example Invalidate all user queries
+ * queryClient.invalidateQueries({ queryKey: userQueryKeys.all })
+ * 
+ * @example Invalidate specific user
+ * queryClient.invalidateQueries({ queryKey: userQueryKeys.findById({ id: userId }) })
+ */
+export const userQueryKeys = {
+  /** Base key for all user queries */
+  all: ['user'] as const,
+  
+  /** User list base key */
+  list: (input?: Record<string, unknown>) => 
+    ['user', 'list', input] as const,
+  
+  /** User by ID query key */
+  findById: (input: { params: { id: string } }) => 
+    ['user', 'findById', input] as const,
+  
+  /** User count query key */
+  count: () => 
+    ['user', 'count'] as const,
+  
+  /** Check email query key */
+  checkEmail: (input: { body: { email: string } }) => 
+    ['user', 'checkEmail', input] as const,
+}

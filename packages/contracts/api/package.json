@@ -16,7 +16,11 @@
     "build": "bun scripts/build.ts",
     "compile": "bun x cross-env COMPILE_MODE=true bun run build",
     "dev": "bun run build -- --watch",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@orpc/contract": "catalog:orpc",
@@ -34,6 +38,11 @@
     "@types/node": "catalog:build",
     "chokidar": "catalog:build",
     "@repo-configs/typescript": "*",
-    "typescript": "catalog:build"
+    "typescript": "catalog:build",
+    "eslint": "catalog:linting",
+    "@repo-configs/eslint": "*",
+    "@repo-configs/prettier": "*",
+    "vitest": "catalog:testing",
+    "@vitest/coverage-v8": "catalog:testing"
   }
 }

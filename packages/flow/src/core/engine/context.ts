@@ -38,7 +38,7 @@ class DefaultErrorHandler implements ErrorHandler {
     context.logger.error('Execution error:', error);
   }
 
-  canRecover(_error: Error): boolean {
+  canRecover(): boolean {
     return false;
   }
 }
@@ -56,8 +56,8 @@ export class ExecutionContext implements IExecutionContext {
   scopes: ScopeStack;
 
   // Node inputs/outputs
-  inputs: Record<string, any>;
-  outputs: Record<string, any>;
+  inputs: Record<string, unknown>;
+  outputs: Record<string, unknown>;
 
   // Execution state
   state: ExecutionState;
@@ -152,7 +152,7 @@ export class ExecutionContext implements IExecutionContext {
   getDuration(): number | undefined {
     if (!this.state.startTime) return undefined;
     
-    const endTime = this.state.endTime || new Date();
+    const endTime = this.state.endTime ?? new Date();
     return endTime.getTime() - this.state.startTime.getTime();
   }
 

@@ -2,32 +2,29 @@
  * @fileoverview User Domain Query Keys
  * 
  * Centralized query keys for user-related queries.
- * Reuses ORPC-generated keys from userHooks and adds custom keys.
+ * Reuses ORPC-generated keys from userEndpoints and adds custom keys.
  * 
- * @see apps/web/src/hooks/useUser.ts - ORPC-generated user hooks
+ * @see apps/web/src/domains/user/endpoints.ts - User domain endpoints with query keys
  */
 
 import type { QueryClient } from '@tanstack/react-query'
-import { userQueryKeys } from '@/hooks/useUser'
+import { userQueryKeys as domainUserKeys } from '@/domains/user/endpoints'
 
 // ============================================================================
 // ORPC-GENERATED KEYS (Re-exported)
 // ============================================================================
 
 /**
- * User query keys from ORPC contract
+ * User query keys from domain endpoints
  * 
  * Available keys:
  * - userKeys.all - Base key for all user queries: ['user']
  * - userKeys.list(input?) - User list key
  * - userKeys.findById(input) - User detail key
  * - userKeys.count(input?) - User count key
- * - userKeys.checkEmail(input) - Email check key (mutation)
- * - userKeys.create(input) - Create user key (mutation)
- * - userKeys.update(input) - Update user key (mutation)
- * - userKeys.delete(input) - Delete user key (mutation)
+ * - userKeys.checkEmail(input) - Email check key
  */
-export const userKeys = userQueryKeys
+export const userKeys = domainUserKeys
 
 // ============================================================================
 // CUSTOM KEYS (Domain-specific extensions)
@@ -106,7 +103,7 @@ export const invalidateUserQueries = {
   
   /** Invalidate specific user by ID */
   byId: (queryClient: QueryClient, userId: string) => {
-    void queryClient.invalidateQueries({ queryKey: userKeys.findById({ id: userId }) })
+    void queryClient.invalidateQueries({ queryKey: userKeys.findById({ params: { id: userId } }) })
     void queryClient.invalidateQueries({ queryKey: userCustomKeys.preferences(userId) })
     void queryClient.invalidateQueries({ queryKey: userCustomKeys.activity(userId) })
   },

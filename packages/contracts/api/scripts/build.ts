@@ -45,7 +45,7 @@ async function buildContracts() {
 
   if (!result.success) {
     console.error("Build failed:");
-    result.logs.forEach((log) => console.error(log));
+    result.logs.forEach((log) => { console.error(log); });
     process.exit(1);
   }
 
@@ -54,7 +54,7 @@ async function buildContracts() {
 }
 
 // Setup file watcher
-async function setupWatcher() {
+function setupWatcher(): void {
   if (!chokidar) {
     console.error('❌ chokidar not available - watch mode requires: bun add -d chokidar');
     process.exit(1);
@@ -102,13 +102,10 @@ async function setupWatcher() {
 buildContracts()
   .then(() => {
     if (watch) {
-      setupWatcher().catch((error) => {
-        console.error("Watcher error:", error);
-        process.exit(1);
-      });
+      setupWatcher();
     }
   })
-  .catch((error) => {
+  .catch((error: unknown) => {
     console.error("Build error:", error);
     process.exit(1);
   });

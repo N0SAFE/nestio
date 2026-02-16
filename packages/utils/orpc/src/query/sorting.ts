@@ -76,8 +76,10 @@ export const createSortingConfigSchema = <
     /** Available fields for sorting */
     fields: (z.custom<TFields>().default as unknown as (fn: () => TFields) => z.ZodDefault<z.ZodType<TFields>>)(() => fields),
     /** Default field to sort by */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- TFields[number] is constrained but TypeScript needs explicit cast for enum default
-    defaultField: z.enum(fields as unknown as [string, ...string[]]).optional().default(defaults?.defaultField as any),
+     
+    defaultField: defaults?.defaultField 
+      ? z.enum(fields as unknown as [string, ...string[]]).optional().default(defaults.defaultField)
+      : z.enum(fields as unknown as [string, ...string[]]).optional(),
     /** Default sort direction */
     defaultDirection: z.enum(["asc", "desc"]).optional().default(defaults?.defaultDirection ?? "asc"),
     /** Allow multiple sort fields */

@@ -512,7 +512,7 @@ export function createConditionSchema(): ConditionSchema {
  * Generate a unique ID
  */
 function generateId(): string {
-  return `cond_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return `cond_${String(Date.now())}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /**

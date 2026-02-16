@@ -5,12 +5,11 @@
  * at each node position, tracking outputs from upstream nodes.
  */
 
-import type { Flow, FlowNode, FlowEdge, FlowVariable } from '../types/flow';
+import type { Flow, FlowNode, FlowVariable } from '../types/flow';
 import type { FlowPlugin } from '../types/plugin';
 import type {
   VariableSchema,
   VariableDefinition,
-  FlowContext,
   PluginOutputSchema,
 } from '../types/variable-schema';
 import { SchemaHelpers } from '../types/variable-schema';
@@ -100,12 +99,10 @@ export class FlowContextAnalyzer {
     const executionOrder = this.topologicalSort(flow, adjacencyList, errors);
 
     // Extract global variables from flow definition
-    if (flow.variables) {
-      for (const variable of flow.variables) {
-        const def = this.flowVariableToDefinition(variable);
-        globalVariables.push(def);
-        allVariables.push(def);
-      }
+    for (const variable of flow.variables) {
+      const def = this.flowVariableToDefinition(variable);
+      globalVariables.push(def);
+      allVariables.push(def);
     }
 
     // Analyze each node in execution order
@@ -198,7 +195,7 @@ export class FlowContextAnalyzer {
     }
 
     // Get variables produced by this node
-    const producedVariables = this.getNodeProducedVariables(node, flow);
+    const producedVariables = this.getNodeProducedVariables(node);
 
     // Validate variable references in node config
     this.validateVariableReferences(node, availableVariables, errors);
@@ -215,7 +212,7 @@ export class FlowContextAnalyzer {
   /**
    * Get variables produced by a node
    */
-  private getNodeProducedVariables(node: FlowNode, _flow: Flow): VariableDefinition[] {
+  private getNodeProducedVariables(node: FlowNode): VariableDefinition[] {
     const produced: VariableDefinition[] = [];
     const plugin = this.pluginLookup.get(node.pluginId);
 
@@ -225,57 +222,57 @@ export class FlowContextAnalyzer {
     const outputSchema = this.nodeOutputSchemas.get(plugin.id);
     if (outputSchema) {
       // Add main output as variable with node ID
-      produced.push({
-        name: `${node.id}_output`,
-        schema: outputSchema.output,
-        source: node.id,
-        sourceLabel: node.label ?? plugin.name,
-      });
+        produced.push({
+          name: `${node.id}_output`,
+          schema: outputSchema.output,
+          source: node.id,
+          sourceLabel: node.label,
+        });
 
       // Add named outputs
       if (outputSchema.namedOutputs) {
         for (const [name, schema] of Object.entries(outputSchema.namedOutputs)) {
-          produced.push({
-            name: `${node.id}_${name}`,
-            schema,
-            source: node.id,
-            sourceLabel: node.label ?? plugin.name,
-            path: name,
-          });
+            produced.push({
+              name: `${node.id}_${name}`,
+              schema,
+              source: node.id,
+              sourceLabel: node.label,
+              path: name,
+            });
         }
       }
 
       // Add explicitly set variables
       if (outputSchema.setsVariables) {
         for (const setVar of outputSchema.setsVariables) {
-          produced.push({
-            name: setVar.name,
-            schema: { ...setVar.schema, description: setVar.description },
-            source: node.id,
-            sourceLabel: node.label ?? plugin.name,
-          });
+            produced.push({
+              name: setVar.name,
+              schema: { ...setVar.schema, description: setVar.description },
+              source: node.id,
+              sourceLabel: node.label,
+            });
         }
       }
     } else {
       // Infer from plugin's outputSchema (Zod)
       if (plugin.outputSchema) {
-        produced.push({
-          name: `${node.id}_output`,
-          schema: SchemaHelpers.any({ description: `Output from ${plugin.name}` }),
-          source: node.id,
-          sourceLabel: node.label ?? plugin.name,
-        });
+          produced.push({
+            name: `${node.id}_output`,
+            schema: SchemaHelpers.any({ description: `Output from ${plugin.name}` }),
+            source: node.id,
+            sourceLabel: node.label,
+          });
       }
     }
 
     // Check node config for variable assignments
     const config = node.config as Record<string, unknown>;
-    if (config?.outputVariable && typeof config.outputVariable === 'string') {
+    if (typeof config.outputVariable === 'string') {
       produced.push({
         name: config.outputVariable,
         schema: outputSchema?.output ?? SchemaHelpers.any(),
         source: node.id,
-        sourceLabel: node.label ?? plugin?.name ?? 'Unknown',
+        sourceLabel: node.label,
       });
     }
 
@@ -291,19 +288,19 @@ export class FlowContextAnalyzer {
     errors: AnalysisError[]
   ): void {
     const config = node.config;
-    if (!config || typeof config !== 'object') return;
 
     // Recursively check all string values for variable references
     const checkValue = (value: unknown) => {
       if (typeof value === 'string' && value.includes('{{')) {
         const varRefs = this.extractVariableReferences(value);
         for (const varRef of varRefs) {
-          const varName = varRef.split('.')[0]!;
+          const [varName] = varRef.split('.');
+          if (!varName) continue;
           const available = availableVariables.find(v => v.name === varName);
-          if (!available) {
+            if (!available) {
             errors.push({
               type: 'undefined-variable',
-              message: `Variable "${varName}" is not defined at node "${node.label ?? node.id}"`,
+                message: `Variable "${varName}" is not defined at node "${node.label}"`,
               nodeId: node.id,
               variableName: varName,
             });
@@ -327,17 +324,18 @@ export class FlowContextAnalyzer {
    * Extract variable references from a string
    */
   private extractVariableReferences(str: string): string[] {
-    const matches = str.match(/\{\{\s*([^}]+)\s*\}\}/g);
-    if (!matches) return [];
-
     const refs: string[] = [];
-    for (const match of matches) {
-      const expr = match.slice(2, -2).trim();
-      // Extract the base variable name (before any operators)
-      const varMatch = expr.match(/^([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*(?:\[\d+\])?)/);
-      if (varMatch?.[1]) {
-        refs.push(varMatch[1]);
+    const matchPattern = /\{\{\s*([^}]+)\s*\}\}/g;
+    let match = matchPattern.exec(str);
+    while (match) {
+      const expr = match[1]?.trim();
+      if (expr) {
+        const varMatch = /^([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*(?:\[\d+\])?)/.exec(expr);
+        if (varMatch?.[1]) {
+          refs.push(varMatch[1]);
+        }
       }
+      match = matchPattern.exec(str);
     }
 
     return refs;
@@ -458,10 +456,11 @@ export class FlowContextAnalyzer {
     reverseAdjacencyList: Map<string, string[]>
   ): string[] {
     const visited = new Set<string>();
-    const queue = [...(reverseAdjacencyList.get(nodeId) ?? [])];
+    const queue = [...reverseAdjacencyList.get(nodeId) ?? []];
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const current = queue.shift();
+      if (!current) continue;
       if (visited.has(current)) continue;
 
       visited.add(current);
@@ -499,7 +498,8 @@ export class FlowContextAnalyzer {
       .map(n => n.id);
 
     while (queue.length > 0) {
-      const nodeId = queue.shift()!;
+      const nodeId = queue.shift();
+      if (!nodeId) continue;
       sorted.push(nodeId);
 
       const downstream = adjacencyList.get(nodeId) ?? [];

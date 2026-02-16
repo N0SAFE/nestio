@@ -26,7 +26,7 @@ export interface ExecutorOptions {
   /**
    * Initial variables
    */
-  initialVariables?: Record<string, any>;
+  initialVariables?: Record<string, unknown>;
 
   /**
    * Debug mode
@@ -177,6 +177,9 @@ export class FlowExecutor {
     // Execute plugin
     try {
       const result = await plugin.execute(this.context, node.config);
+      if (!result || typeof result !== 'object') {
+        return {};
+      }
       return result as Record<string, unknown>;
     } catch (error) {
       this.context.logger.error(`Error executing plugin ${node.pluginId}:`, error);
@@ -188,12 +191,12 @@ export class FlowExecutor {
    * Prepare node inputs by resolving expressions
    */
   protected prepareInputs(node: FlowNode): void {
-    const inputs: Record<string, any> = {};
+    const inputs: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(node.data.inputs)) {
       if (typeof value === 'string' && value.includes('{{')) {
         // Resolve expression
-        inputs[key] = this.evaluator.evaluate(value, this.context);
+        inputs[key] = this.evaluator.evaluate(value, this.context) as unknown;
       } else {
         inputs[key] = value;
       }
@@ -274,7 +277,7 @@ export class FlowExecutor {
     const config = node.config as {
       ifCondition: string;
       ifHandle: string;
-      elseIfBranches: Array<{ id: string; condition: string; handle: string }>;
+      elseIfBranches: { id: string; condition: string; handle: string }[];
       elseHandle: string;
     };
 
@@ -319,7 +322,7 @@ export class FlowExecutor {
   ): Promise<void> {
     const config = node.config as {
       expression: string;
-      cases: Array<{ value: unknown; handle: string; label?: string }>;
+      cases: { value: unknown; handle: string; label?: string }[];
       defaultHandle?: string;
     };
 

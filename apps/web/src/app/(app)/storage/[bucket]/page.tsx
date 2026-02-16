@@ -16,7 +16,7 @@ export default function BucketPage(): JSX.Element {
   const bucket = params.bucket as string
   const [currentPath, setCurrentPath] = useState('')
 
-  const { data, isLoading, error, refetch } = useObjects(bucket, currentPath)
+  const { data, isLoading, isError, error, refetch } = useObjects(bucket, currentPath)
 
   if (isLoading) {
     return (
@@ -26,7 +26,7 @@ export default function BucketPage(): JSX.Element {
     )
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -45,7 +45,7 @@ export default function BucketPage(): JSX.Element {
     name: obj.name.split('/').pop() ?? obj.name,
     key: obj.name,
     size: obj.size,
-    lastModified: obj.lastModified ? new Date(obj.lastModified) : undefined,
+    lastModified: new Date(obj.lastModified),
     etag: obj.etag,
     isPrefix: obj.name.endsWith('/'),
   }))

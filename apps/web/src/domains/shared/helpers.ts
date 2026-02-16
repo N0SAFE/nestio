@@ -766,11 +766,108 @@ export function customTyped<
 // ============================================================================
 
 /**
+ * Type for detailed input structure (used by inputStructure: 'detailed')
+ */
+interface DetailedInput { params?: unknown; query?: unknown; body?: unknown };
+
+/**
+ * Detect if a value represents a detailed input structure
+ * Detailed input has { params?, query?, body? } structure
+ */
+function isDetailedInput(value: unknown): value is DetailedInput {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const keys = Object.keys(value);
+  // Check if it has at least one of params/query/body and ONLY those keys
+  const hasDetailedKeys = keys.some(k => k === 'params' || k === 'query' || k === 'body');
+  const onlyDetailedKeys = keys.every(k => k === 'params' || k === 'query' || k === 'body');
+  return hasDetailedKeys && onlyDetailedKeys;
+}
+
+/**
+ * Check if two objects match based on the matcher's structure
+ * For detailed inputs, only compares the parts specified in the matcher
+ */
+function matchesInput(target: unknown, matcher: unknown): boolean {
+  // If matcher is not an object, do exact match
+  if (typeof matcher !== 'object' || matcher === null) {
+    return target === matcher;
+  }
+  
+  // If target is not an object, can't match
+  if (typeof target !== 'object' || target === null) {
+    return false;
+  }
+  
+  const targetObj = target as Record<string, unknown>;
+  const matcherObj = matcher as Record<string, unknown>;
+  
+  // Check if matcher is detailed input structure
+  if (isDetailedInput(matcherObj)) {
+    // Target should also be detailed input
+    if (!isDetailedInput(targetObj)) {
+      return false;
+    }
+    
+    // Match each specified part (params, query, body)
+    for (const key of ['params', 'query', 'body'] as const) {
+      if (matcherObj[key] !== undefined) {
+        // If matcher specifies this part, target must match it
+        if (!deepMatch(targetObj[key], matcherObj[key])) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  
+  // For non-detailed inputs, do deep match
+  return deepMatch(target, matcher);
+}
+
+/**
+ * Deep match two values recursively
+ */
+function deepMatch(target: unknown, matcher: unknown): boolean {
+  // Primitive match
+  if (typeof matcher !== 'object' || matcher === null) {
+    return target === matcher;
+  }
+  
+  if (typeof target !== 'object' || target === null) {
+    return false;
+  }
+  
+  // Array match
+  if (Array.isArray(matcher)) {
+    if (!Array.isArray(target)) return false;
+    if (target.length !== matcher.length) return false;
+    return matcher.every((item, i) => deepMatch(target[i], item));
+  }
+  
+  // Object match - matcher properties must exist and match in target
+  const targetObj = target as Record<string, unknown>;
+  const matcherObj = matcher as Record<string, unknown>;
+  
+  for (const key in matcherObj) {
+    if (!(key in targetObj)) return false;
+    if (!deepMatch(targetObj[key], matcherObj[key])) return false;
+  }
+  
+  return true;
+}
+
+/**
  * Extract keys retrieval functions from an ORPC-compatible record
  *
  * Transforms each endpoint into a function that returns its query key.
  * This allows type-safe access to query keys for cache invalidation.
  * Uses MaybeOptionalOptions to match ORPC's queryKey signature exactly.
+ *
+ * Each key function has:
+ * - `.key()` method to get the base query key (without input)
+ * - `.predicate` property with methods that return InvalidationEntry objects
  *
  * @example
  * ```typescript
@@ -778,15 +875,137 @@ export function customTyped<
  * // authKeys = {
  * //   session: () => ['auth', 'session'],           // No input required
  * //   signIn: ({ input: ... }) => ['auth', 'signIn', input],  // Input optional
+ * //   signIn.key: () => ['auth', 'signIn'],        // Base key without input
+ * //   signIn.predicate: { by, byParams, all, ... } // Returns InvalidationEntry
  * // }
+ *
+ * // Usage patterns:
+ * keys.signIn({ input })          // Full query key with input (exact match)
+ * keys.signIn.key()               // Base key for custom predicate
+ * keys.signIn.predicate.by({ id }) // InvalidationEntry with partial match
+ * keys.signIn.predicate.all()     // InvalidationEntry to invalidate all
  * ```
  */
+
+/**
+ * Context provided to predicate functions for matching cached queries
+ * Uses discriminated union so TypeScript narrows inputPart type based on isDetailed
+ */
+export type PredicateContext<TInput = unknown> = 
+  | {
+      /** The input part as detailed structure ({ params, query, body }) */
+      inputPart: DetailedInput;
+      /** The full cached query key */
+      cachedKey: readonly unknown[];
+      /** Discriminant: input is detailed structure */
+      isDetailed: true;
+    }
+  | {
+      /** The input part (flat structure or unknown) */
+      inputPart: TInput;
+      /** The full cached query key */
+      cachedKey: readonly unknown[];
+      /** Discriminant: input is NOT detailed structure */
+      isDetailed: false;
+    };
+
+/**
+ * Predicate builder attached to key functions - returns InvalidationEntry objects
+ * 
+ * Can be called directly with a context-aware predicate function:
+ * - predicate(({ inputPart }) => inputPart?.id === value) 
+ * 
+ * Or use the helper methods for common patterns:
+ * 
+ * For detailed inputs (with { params, query, body, headers }):
+ * - predicate.byParams({ id }) - match on params only
+ * - predicate.byQuery({ expand }) - match on query only  
+ * - predicate.byBody({ data }) - match on body only
+ * - predicate.byHeaders({ authorization }) - match on headers only
+ * - predicate.byParamsAndQuery({ id }, { expand }) - match on params AND query
+ * 
+ * For flat inputs (e.g., { id, name }):
+ * - predicate.by({ id }) - match on any subset of the input
+ * 
+ * For all queries:
+ * - predicate.all() - match all queries for this endpoint
+ */
+export interface KeyPredicateBuilder<TInput> {
+  /**
+   * Direct call with context-aware predicate function (shorthand for predicate.custom)
+   * Provides direct access to inputPart, cachedKey, and isDetailed
+   * @example keys.findById.predicate(({ inputPart }) => inputPart?.params?.id === '123')
+   */
+  (fn: (ctx: PredicateContext<TInput>) => boolean): InvalidationEntry;
+  
+  /**
+   * Whether the input type is a detailed structure ({ params, query, body, headers })
+   * Use this to conditionally apply the right matching method
+   */
+  readonly isDetailed: TInput extends { params: unknown } ? true : false;
+  
+  /**
+   * Match on any subset of the input (works for both flat and detailed inputs)
+   * For flat inputs: by({ id }) matches queries where input.id matches
+   * For detailed inputs: by({ params: { id } }) matches queries where input.params.id matches
+   */
+  by: (partialInput: Partial<TInput>) => InvalidationEntry;
+  
+  /**
+   * Match on params only (for detailed inputs with { params, query, body, headers })
+   */
+  byParams: (params: TInput extends { params: infer P } ? Partial<P> : never) => InvalidationEntry;
+  
+  /**
+   * Match on query only (for detailed inputs)
+   */
+  byQuery: (query: TInput extends { query: infer Q } ? Partial<Q> : never) => InvalidationEntry;
+  
+  /**
+   * Match on body only (for detailed inputs)
+   */
+  byBody: (body: TInput extends { body: infer B } ? Partial<B> : never) => InvalidationEntry;
+  
+  /**
+   * Match on headers only (for detailed inputs)
+   */
+  byHeaders: (headers: TInput extends { headers: infer H } ? Partial<H> : never) => InvalidationEntry;
+  
+  /**
+   * Match on params AND query together (for detailed inputs)
+   * Useful when you need to match on both params and specific query values
+   */
+  byParamsAndQuery: (
+    params: TInput extends { params: infer P } ? Partial<P> : never,
+    query: TInput extends { query: infer Q } ? Partial<Q> : never
+  ) => InvalidationEntry;
+  
+  /**
+   * Custom predicate function with full context access (same as direct call)
+   */
+  custom: (fn: (ctx: PredicateContext<TInput>) => boolean) => InvalidationEntry;
+  
+  /**
+   * Match all queries for this endpoint (ignores input entirely)
+   */
+  all: () => InvalidationEntry;
+}
+
+/**
+ * Key function with additional .key() and .predicate methods
+ */
+type KeyFunctionWithBase<TInput, TOutput, TError> = 
+  ((...args: MaybeOptionalOptions<{ input?: TInput; queryKey?: QueryKey }>) => DataTag<QueryKey, TOutput, TError>) & {
+    key: () => QueryKey;
+    predicate: KeyPredicateBuilder<TInput>;
+  };
+
 export type ExtractKeys<TRecord extends Record<string, unknown>> = {
   [K in keyof TRecord]: TRecord[K] extends {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     call: Client<any, infer TInput, infer TOutput, infer TError>;
   }
-    ? (...args: MaybeOptionalOptions<{ input?: TInput; queryKey?: QueryKey }>) => DataTag<QueryKey, TOutput, TError>
+    ? KeyFunctionWithBase<TInput, TOutput, TError>
     : never;
 };
 
@@ -794,7 +1013,7 @@ export type ExtractKeys<TRecord extends Record<string, unknown>> = {
  * Helper to extract keys from an ORPC-compatible record
  *
  * @param record - Record of ORPC-compatible endpoints
- * @returns Object with same keys but functions that return QueryKey
+ * @returns Object with same keys but functions that return QueryKey (with .key() and .predicate methods)
  */
 export function getKeysRetrieval<TRecord extends Record<string, unknown>>(
   record: TRecord,
@@ -807,7 +1026,74 @@ export function getKeysRetrieval<TRecord extends Record<string, unknown>>(
       const queryKeyFn = (
         endpoint as { queryKey: (...args: unknown[]) => QueryKey }
       ).queryKey;
-      keys[key] = queryKeyFn as ExtractKeys<TRecord>[typeof key];
+      
+      const baseKey = () => queryKeyFn();
+      
+      // Base predicate creator - all methods use this to provide unified context API
+      // Uses conditional construction so TypeScript properly narrows the discriminated union
+      const createPredicate = (
+        fn: (ctx: PredicateContext) => boolean
+      ): InvalidationEntry => ({
+        queryKey: baseKey(),
+        predicate: (cachedKey: readonly unknown[]) => {
+          const inputPart = cachedKey[cachedKey.length - 1];
+          // Construct context conditionally for proper type narrowing
+          const ctx: PredicateContext = isDetailedInput(inputPart)
+            ? { inputPart, cachedKey, isDetailed: true }
+            : { inputPart, cachedKey, isDetailed: false };
+          return fn(ctx);
+        },
+      });
+      
+      // Create predicate builder as a callable function with methods
+      // predicate(fn) is shorthand for predicate.custom(fn)
+      // All methods use createPredicate() to provide unified context API
+      const predicateBuilder = Object.assign(
+        createPredicate,
+        {
+          isDetailed: false as never, // Will be determined by type system
+          
+          by: (partialInput: unknown) => 
+            createPredicate((ctx) => deepMatch(ctx.inputPart, partialInput)),
+          
+          byParams: (params: unknown) => 
+            createPredicate((ctx) => 
+              ctx.isDetailed && deepMatch(ctx.inputPart.params, params)),
+          
+          byQuery: (query: unknown) => 
+            createPredicate((ctx) => 
+              ctx.isDetailed && deepMatch(ctx.inputPart.query, query)),
+          
+          byBody: (body: unknown) => 
+            createPredicate((ctx) => 
+              ctx.isDetailed && deepMatch(ctx.inputPart.body, body)),
+          
+          byHeaders: (headers: unknown) => 
+            createPredicate((ctx) => 
+              ctx.isDetailed && deepMatch((ctx.inputPart as { headers?: unknown }).headers, headers)),
+          
+          byParamsAndQuery: (params: unknown, query: unknown) => 
+            createPredicate((ctx) => 
+              ctx.isDetailed && 
+              deepMatch(ctx.inputPart.params, params) && 
+              deepMatch(ctx.inputPart.query, query)),
+          
+          custom: createPredicate,
+          
+          all: () => createPredicate(() => true),
+        }
+      ) as KeyPredicateBuilder<unknown>;
+      
+      // Create wrapper function with .key() and .predicate methods
+      const keyFnWithBase = Object.assign(
+        (...args: unknown[]) => queryKeyFn(...args),
+        {
+          key: baseKey,
+          predicate: predicateBuilder,
+        }
+      );
+      
+      keys[key] = keyFnWithBase as ExtractKeys<TRecord>[typeof key];
     }
   }
 
@@ -831,23 +1117,51 @@ export type ExtractMutationInput<TEndpoint> = TEndpoint extends {
   : never;
 
 /**
+ * Match strategy for cache invalidation with detailed input structures
+ */
+export type InvalidationMatchStrategy = 
+  | 'exact'    // Exact match on all input parts (params, query, body)
+  | 'partial'  // Match on specified parts only (default for detailed inputs)
+  | 'all';     // Invalidate all queries for this endpoint regardless of input
+
+/**
+ * Invalidation scope - determines how broadly to invalidate
+ */
+export type InvalidationScope = 
+  | 'exact'    // Only this specific query key
+  | 'all';     // All queries matching the base key
+
+/**
+ * Single invalidation entry - can be a query key or a config object
+ */
+export type InvalidationEntry = 
+  | QueryKey
+  | {
+      queryKey: QueryKey;
+      match?: InvalidationMatchStrategy;
+      scope?: InvalidationScope;
+      predicate?: (cachedKey: readonly unknown[]) => boolean;
+    };
+
+/**
  * Configuration for cache invalidation - definition format
  *
  * Maps each mutation endpoint to a function that returns the query keys to invalidate.
- * The function receives a context object with input and keys properties.
+ * The function receives a context object with input, keys, and predicate properties.
  */
 export type InvalidationConfig<TRecord extends Record<string, unknown>> = {
   [K in keyof TRecord]?: (context: {
     input: ExtractMutationInput<TRecord[K]>;
     keys: ExtractKeys<TRecord>;
-  }) => QueryKey[];
+    predicate: InvalidationPredicate<ExtractMutationInput<TRecord[K]>>;
+  }) => InvalidationEntry[];
 };
 
 /**
  * Callable invalidation config - usage format
  *
  * After wrapping with defineInvalidations, each function only needs the input parameter.
- * The keys are automatically bound. Only includes the keys that were actually defined.
+ * The keys and predicate are automatically bound. Only includes the keys that were actually defined.
  */
 export type CallableInvalidationConfig<
   TRecord extends Record<string, unknown>,
@@ -856,10 +1170,104 @@ export type CallableInvalidationConfig<
   [K in keyof TConfig as TConfig[K] extends undefined ? never : K]: TConfig[K] extends (context: {
     input: infer I;
     keys: infer Keys;
-  }) => QueryKey[]
-    ? (input: I) => QueryKey[]
+    predicate: infer Pred;
+  }) => InvalidationEntry[]
+    ? (input: I) => InvalidationEntry[]
     : never;
 };
+
+/**
+ * Predicate builder for custom invalidation logic
+ */
+export interface InvalidationPredicate<TInput = unknown> {
+  /**
+   * Match on any subset of the input (works for both flat and detailed inputs)
+   * @example
+   * // Flat input: { id: string, name?: string }
+   * predicate.by({ id: input.id }) // matches any query with this id
+   * 
+   * // Detailed input: { params: { id }, query: { expand } }
+   * predicate.by({ params: { id: input.params.id } }) // matches any query with this params.id
+   */
+  by: (partialInput: Partial<TInput>) => (cachedKey: readonly unknown[]) => boolean;
+  
+  /**
+   * Match on params only (for detailed inputs)
+   */
+  byParams: (params: TInput extends { params: infer P } ? Partial<P> : never) => (cachedKey: readonly unknown[]) => boolean;
+  
+  /**
+   * Match on query only (for detailed inputs)
+   */
+  byQuery: (query: TInput extends { query: infer Q } ? Partial<Q> : never) => (cachedKey: readonly unknown[]) => boolean;
+  
+  /**
+   * Match on body only (for detailed inputs)
+   */
+  byBody: (body: TInput extends { body: infer B } ? Partial<B> : never) => (cachedKey: readonly unknown[]) => boolean;
+  
+  /**
+   * Custom predicate function
+   */
+  custom: (fn: (cachedKey: readonly unknown[]) => boolean) => (cachedKey: readonly unknown[]) => boolean;
+  
+  /**
+   * Match all queries for this endpoint
+   */
+  all: () => (cachedKey: readonly unknown[]) => boolean;
+}
+
+/**
+ * Create a predicate builder for type-safe invalidation predicates
+ * 
+ * @example
+ * ```typescript
+ * const userInvalidations = defineInvalidations(userEndpoints, {
+ *   update: ({ input, keys, predicate }) => [
+ *     {
+ *       queryKey: keys.findById.key(),
+ *       predicate: predicate.byParams({ id: input.params.id })
+ *     },
+ *     // Or use all() to invalidate all findById queries
+ *     {
+ *       queryKey: keys.list.key(),
+ *       predicate: predicate.all()
+ *     }
+ *   ]
+ * })
+ * ```
+ */
+export function createInvalidationPredicate<TInput>(): InvalidationPredicate<TInput> {
+  return {
+    by: (partialInput) => (cachedKey) => {
+      const inputPart = cachedKey[cachedKey.length - 1];
+      // Works for both flat and detailed inputs
+      return deepMatch(inputPart, partialInput);
+    },
+    
+    byParams: (params) => (cachedKey) => {
+      const inputPart = cachedKey[cachedKey.length - 1];
+      if (!isDetailedInput(inputPart)) return false;
+      return deepMatch(inputPart.params, params);
+    },
+    
+    byQuery: (query) => (cachedKey) => {
+      const inputPart = cachedKey[cachedKey.length - 1];
+      if (!isDetailedInput(inputPart)) return false;
+      return deepMatch(inputPart.query, query);
+    },
+    
+    byBody: (body) => (cachedKey) => {
+      const inputPart = cachedKey[cachedKey.length - 1];
+      if (!isDetailedInput(inputPart)) return false;
+      return deepMatch(inputPart.body, body);
+    },
+    
+    custom: (fn) => fn,
+    
+    all: () => () => true,
+  };
+}
 
 /**
  * Define cache invalidation configuration for ORPC-compatible endpoints
@@ -872,6 +1280,33 @@ export type CallableInvalidationConfig<
  * @param config - Invalidation configuration mapping mutations to query keys
  * @returns A callable config where each function only needs the input parameter
  *
+ * **Detailed Input Structure Support:**
+ *
+ * When using `inputStructure: "detailed"` in oRPC contracts, inputs are structured as:
+ * `{ params?: {...}, query?: {...}, body?: {...} }`
+ *
+ * Query keys preserve this structure: `['user', 'find', 'by', 'id', { params: { id: '123' }, query: { expand: true } }]`
+ *
+ * The invalidation system uses **predicate-based matching** for detailed inputs:
+ * - Specify only the parts you care about (e.g., just `params.id`)
+ * - Matches ALL queries with those params, regardless of query/body values
+ * - Works with any router nesting depth (e.g., `user.find.by.id`)
+ *
+ * Example:
+ * ```typescript
+ * // This invalidation spec:
+ * keys.getObject({ input: { params: { objectId: '123' } } })
+ * 
+ * // Will match and invalidate ALL of these cached queries:
+ * ['storage', 'getObject', { params: { objectId: '123' }, query: { includeMetadata: true } }] ✅
+ * ['storage', 'getObject', { params: { objectId: '123' }, query: { includeMetadata: false } }] ✅
+ * ['storage', 'getObject', { params: { objectId: '123' } }] ✅
+ * 
+ * // But NOT these:
+ * ['storage', 'getObject', { params: { objectId: '456' } }] ❌
+ * ['storage', 'listObjects', { params: { objectId: '123' } }] ❌ (different endpoint)
+ * ```
+ *
  * **Invalidation Patterns:**
  *
  * 1. **Same-domain invalidation** - Use keys from the same endpoint record:
@@ -879,6 +1314,47 @@ export type CallableInvalidationConfig<
  * const authInvalidations = defineInvalidations(authEndpoints, {
  *   signIn: ({ input, keys }) => [keys.session()],
  *   signOut: ({ input, keys }) => [keys.session()],
+ * })
+ * ```
+ *
+ * **Advanced: Using InvalidationEntry with Match Strategies:**
+ *
+ * For detailed input structures, you can use InvalidationEntry objects to specify
+ * how matching should be performed:
+ *
+ * ```typescript
+ * const storageInvalidations = defineInvalidations(storageEndpoints, {
+ *   updateObject: ({ input, keys, predicate }) => [
+ *     // Default: Returns QueryKey for exact match
+ *     keys.getObject({ input }),
+ *     
+ *     // Match by params only (ignores query/body)
+ *     {
+ *       queryKey: keys.getObject.key(),
+ *       predicate: predicate.byParams({ objectId: input.params.objectId })
+ *     },
+ *     
+ *     // Match by query only
+ *     {
+ *       queryKey: keys.listObjects.key(),
+ *       predicate: predicate.byQuery({ prefix: input.query?.prefix })
+ *     },
+ *     
+ *     // Invalidate ALL queries for an endpoint
+ *     {
+ *       queryKey: keys.list.key(),
+ *       predicate: predicate.all()
+ *     },
+ *     
+ *     // Custom predicate for complex logic
+ *     {
+ *       queryKey: keys.search.key(),
+ *       predicate: predicate.custom((cachedKey) => {
+ *         const cachedInput = cachedKey[cachedKey.length - 1];
+ *         return cachedInput?.params?.bucket === input.params.bucket;
+ *       })
+ *     }
+ *   ],
  * })
  * ```
  *
@@ -951,9 +1427,11 @@ export function defineInvalidations<
   for (const key in config) {
     const invalidationFn = config[key];
     if (invalidationFn) {
-      // Bind keys to the invalidation function so it only needs input
-      callableConfig[key] = (input: unknown) =>
-        invalidationFn({ input: input as never, keys });
+      // Bind keys and predicate to the invalidation function so it only needs input
+      callableConfig[key] = (input: unknown) => {
+        const predicate = createInvalidationPredicate<typeof input>();
+        return invalidationFn({ input: input as never, keys, predicate: predicate as never });
+      };
     }
   }
 
@@ -1065,15 +1543,18 @@ export function wrapWithInvalidations<
     const rawInvalidationFn = (invalidations as Record<string, unknown>)[endpointName];
 
     if (rawInvalidationFn && typeof rawInvalidationFn === 'function') {
-      // Check if this is already a callable (1 param) or raw config (expects { input, keys })
+      // Check if this is already a callable (1 param) or raw config (expects { input, keys, predicate })
       // We check the function's toString to see if it destructures the first parameter
       const fnString = rawInvalidationFn.toString();
-      const isRawConfig = fnString.includes('input') && fnString.includes('keys') && (/\{\s*(input|keys)/.exec(fnString));
+      const isRawConfig = fnString.includes('input') && (fnString.includes('keys') || fnString.includes('predicate')) && (/\{\s*(input|keys|predicate)/.exec(fnString));
       
       // Create unified invalidation function that takes just input
       const invalidationFn = isRawConfig
-        ? (input: unknown) => (rawInvalidationFn as (context: { input: unknown; keys: ExtractKeys<TRecord> }) => QueryKey[])({ input, keys })
-        : (rawInvalidationFn as (input: unknown) => QueryKey[]);
+        ? (input: unknown) => {
+            const predicate = createInvalidationPredicate();
+            return (rawInvalidationFn as (context: { input: unknown; keys: ExtractKeys<TRecord>; predicate: InvalidationPredicate }) => InvalidationEntry[])({ input, keys, predicate });
+          }
+        : (rawInvalidationFn as (input: unknown) => InvalidationEntry[]);
 
       // Extract input type
       type InputType = Parameters<typeof invalidationFn>[0];
@@ -1085,10 +1566,63 @@ export function wrapWithInvalidations<
           queryClient: ReturnType<typeof useQueryClient>,
           input: unknown,
         ) => {
-          const keysToInvalidate = invalidationFn(input);
+          const entriesToInvalidate = invalidationFn(input);
 
-          for (const queryKey of keysToInvalidate) {
-            await queryClient.invalidateQueries({ queryKey: queryKey });
+          for (const entry of entriesToInvalidate) {
+            // Normalize entry to get queryKey and options
+            const isConfigObject = typeof entry === 'object' && !Array.isArray(entry) && 'queryKey' in entry;
+            const queryKey = (isConfigObject ? (entry as { queryKey: QueryKey }).queryKey : entry) as readonly unknown[];
+            const matchStrategy = isConfigObject ? (entry as { match?: InvalidationMatchStrategy }).match : undefined;
+            const customPredicate = isConfigObject ? (entry as { predicate?: (key: readonly unknown[]) => boolean }).predicate : undefined;
+            const scope = isConfigObject ? (entry as { scope?: InvalidationScope }).scope : undefined;
+            
+            // If custom predicate is provided, use it directly
+            if (customPredicate) {
+              await queryClient.invalidateQueries({
+                predicate: (query) => customPredicate(query.queryKey)
+              });
+              continue;
+            }
+            
+            // If scope is 'all', invalidate all queries matching base key (without input)
+            if (scope === 'all') {
+              const baseKey = queryKey.slice(0, -1);
+              await queryClient.invalidateQueries({
+                predicate: (query) => {
+                  return deepMatch(query.queryKey.slice(0, -1), baseKey);
+                }
+              });
+              continue;
+            }
+            
+            // Input is always the LAST element of the query key
+            const inputPart = queryKey[queryKey.length - 1];
+            
+            // Determine if we should use predicate matching
+            const usePredicateMatching = matchStrategy === 'partial' || 
+              (matchStrategy !== 'exact' && inputPart && typeof inputPart === 'object' && !Array.isArray(inputPart));
+            
+            if (usePredicateMatching && inputPart && typeof inputPart === 'object') {
+              const baseKey = queryKey.slice(0, -1);
+              
+              await queryClient.invalidateQueries({
+                predicate: (query) => {
+                  const cachedKey = query.queryKey;
+                  
+                  // Check if keys have same depth
+                  if (cachedKey.length !== queryKey.length) return false;
+                  
+                  // Check if base key matches (all elements except last)
+                  if (!deepMatch(cachedKey.slice(0, -1), baseKey)) return false;
+                  
+                  // Match the input part (last element)
+                  return matchesInput(cachedKey[cachedKey.length - 1], inputPart);
+                }
+              });
+            } else {
+              // For exact match or simple queries, use exact match
+              await queryClient.invalidateQueries({ queryKey: queryKey });
+            }
           }
         },
         withInvalidationOnSuccess: <
@@ -1114,12 +1648,65 @@ export function wrapWithInvalidations<
         > => {
           return async (data, variables, onMutateResult, context) => {
             // Apply invalidations using queryClient from context
-            const keysToInvalidate = invalidationFn(variables);
+            const entriesToInvalidate = invalidationFn(variables);
 
-            for (const queryKey of keysToInvalidate) {
-              await context.client.invalidateQueries({
-                queryKey: queryKey as never,
-              });
+            for (const entry of entriesToInvalidate) {
+              // Normalize entry to get queryKey and options
+              const isConfigObject = typeof entry === 'object' && !Array.isArray(entry) && 'queryKey' in entry;
+              const queryKey = (isConfigObject ? (entry as { queryKey: QueryKey }).queryKey : entry) as readonly unknown[];
+              const matchStrategy = isConfigObject ? (entry as { match?: InvalidationMatchStrategy }).match : undefined;
+              const customPredicate = isConfigObject ? (entry as { predicate?: (key: readonly unknown[]) => boolean }).predicate : undefined;
+              const scope = isConfigObject ? (entry as { scope?: InvalidationScope }).scope : undefined;
+              
+              // If custom predicate is provided, use it directly
+              if (customPredicate) {
+                await context.client.invalidateQueries({
+                  predicate: (query) => customPredicate(query.queryKey)
+                });
+                continue;
+              }
+              
+              // If scope is 'all', invalidate all queries matching base key (without input)
+              if (scope === 'all') {
+                const baseKey = queryKey.slice(0, -1);
+                await context.client.invalidateQueries({
+                  predicate: (query) => {
+                    return deepMatch(query.queryKey.slice(0, -1), baseKey);
+                  }
+                });
+                continue;
+              }
+              
+              // Input is always the LAST element of the query key
+              const inputPart = queryKey[queryKey.length - 1];
+              
+              // Determine if we should use predicate matching
+              const usePredicateMatching = matchStrategy === 'partial' || 
+                (matchStrategy !== 'exact' && inputPart && typeof inputPart === 'object' && !Array.isArray(inputPart));
+              
+              if (usePredicateMatching && inputPart && typeof inputPart === 'object') {
+                const baseKey = queryKey.slice(0, -1);
+                
+                await context.client.invalidateQueries({
+                  predicate: (query) => {
+                    const cachedKey = query.queryKey;
+                    
+                    // Check if keys have same depth
+                    if (cachedKey.length !== queryKey.length) return false;
+                    
+                    // Check if base key matches (all elements except last)
+                    if (!deepMatch(cachedKey.slice(0, -1), baseKey)) return false;
+                    
+                    // Match the input part (last element)
+                    return matchesInput(cachedKey[cachedKey.length - 1], inputPart);
+                  }
+                });
+              } else {
+                // For exact match or simple queries, use exact match
+                await context.client.invalidateQueries({
+                  queryKey: queryKey as never,
+                });
+              }
             }
 
             // Call user's callback if provided

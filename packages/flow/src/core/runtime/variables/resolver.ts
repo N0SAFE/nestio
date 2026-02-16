@@ -19,7 +19,7 @@ export class ExpressionEvaluator {
   /**
    * Evaluate a template string with {{ }} expressions
    */
-  evaluate(expression: string, context: ExecutionContext): any {
+  evaluate(expression: string, context: ExecutionContext) {
     // If no template markers, return as-is
     if (!expression.includes('{{')) {
       return expression;

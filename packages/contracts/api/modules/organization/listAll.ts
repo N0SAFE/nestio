@@ -6,7 +6,6 @@ import {
   createFilteringConfigSchema,
   defineQueryConfig,
   type ComputeInputSchema,
-  type QueryConfig,
 } from "@repo/orpc-utils";
 
 // Define organization schema based on Better Auth's organization structure

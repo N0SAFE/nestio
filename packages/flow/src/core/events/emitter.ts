@@ -4,7 +4,7 @@
  * Simple event system for flow execution events.
  */
 
-import type { EventHandler, FlowEvent } from './types';
+import type { EventHandler } from './types';
 
 /**
  * Event Emitter Implementation
@@ -34,7 +34,7 @@ export class EventEmitter {
    * Register one-time event handler
    */
   once(event: string, handler: EventHandler): void {
-    const wrappedHandler: EventHandler = (data: any) => {
+    const wrappedHandler: EventHandler = (data) => {
       handler(data);
       this.off(event, wrappedHandler);
     };
@@ -55,7 +55,7 @@ export class EventEmitter {
   /**
    * Emit event
    */
-  emit(event: string, data?: any): void {
+  emit(event: string, data?: unknown): void {
     const handlers = this.handlers.get(event);
     if (handlers) {
       for (const handler of handlers) {

@@ -2,28 +2,42 @@
  * @fileoverview Invitation Domain Query Keys
  * 
  * Centralized query keys for invitation-related queries.
- * Reuses invitation hook keys and adds custom keys.
+ * Reuses invitation domain keys and adds custom keys.
  * 
- * @see apps/web/src/hooks/useInvitation.ts - Better Auth invitation hooks
+ * @see apps/web/src/domains/invitation/hooks.ts - Invitation domain hooks
  */
 
 import type { QueryClient } from '@tanstack/react-query'
-import { invitationKeys } from '@/hooks/useInvitation'
 
 // ============================================================================
-// INVITATION KEYS (Re-exported from hook)
+// INVITATION KEYS (Defined locally - matches domain structure)
 // ============================================================================
 
 /**
- * Invitation query keys from custom Better Auth hooks
+ * Invitation query keys for cache management
  * 
  * Available keys:
- * - invitationKeys.platform.all() - Base key for platform invitations
+ * - invitationKeys.all() - Base key for all invitations
+ * - invitationKeys.platformAll() - Base key for platform invitations
  * - invitationKeys.platformList(status?) - Platform invitation list
  * - invitationKeys.organizationPending() - Pending org invitations
  * - invitationKeys.organizationLists() - All org invitation lists
  */
-export { invitationKeys }
+export const invitationKeys = {
+  /** All invitation queries - for broad invalidation */
+  all: () => ['invitations'] as const,
+  
+  /** Platform invitation keys */
+  platformAll: () => ['invitations', 'platform'] as const,
+  platformLists: () => ['invitations', 'platform', 'list'] as const,
+  platformList: (status?: 'pending' | 'used' | 'expired') => 
+    ['invitations', 'platform', 'list', { status }] as const,
+  
+  /** Organization invitation keys */
+  organizationAll: () => ['invitations', 'organization'] as const,
+  organizationLists: () => ['invitations', 'organization', 'list'] as const,
+  organizationPending: () => ['invitations', 'organization', 'list', 'pending'] as const,
+}
 
 // ============================================================================
 // CUSTOM KEYS (Domain-specific extensions)

@@ -11,8 +11,8 @@ type ListOrpc = ListType["~orpc"];
 type ListMeta = ListOrpc["meta"];
 
 // Debug - show me what's in the meta
-type CreateMetaKeys = keyof CreateMeta;
-type ListMetaKeys = keyof ListMeta;
+// type CreateMetaKeys = keyof CreateMeta;
+// type ListMetaKeys = keyof ListMeta;
 
 // Does it have our special key?
 type HasCreateKey = "__orpc_route_builder_method__" extends keyof CreateMeta ? true : false;

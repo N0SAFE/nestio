@@ -87,6 +87,7 @@ export const multipartUpload = pgTable(
   (table) => [
     index("multipart_upload_id_idx").on(table.uploadId),
     index("multipart_bucket_key_idx").on(table.bucketId, table.key),
+    index("multipart_expires_at_idx").on(table.expiresAt), // For cleanup queries
   ],
 );
 

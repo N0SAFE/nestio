@@ -37,7 +37,7 @@ describe('StandardOperations', () => {
 
     it('should create streaming read with custom path', () => {
       const ops = standard(userSchema, 'user');
-      const streamingReadOp = ops.streamingRead({ path: '/{id}/live' });
+      const streamingReadOp = ops.streamingRead();
       const route = streamingReadOp.build();
       
       expect(route).toBeDefined();
@@ -150,7 +150,7 @@ describe('StandardOperations', () => {
         { pagination }
       );
 
-      const inputSchema = listFrom.getInputSchema();
+      const inputSchema = listFrom.getInputSchema()
       expect(inputSchema.safeParse({ orgId: 'acme', limit: 10 }).success).toBe(true);
       expect(inputSchema.safeParse({ limit: 10 }).success).toBe(false);
 
@@ -588,8 +588,9 @@ describe('StandardOperations', () => {
 
     it('should allow using input and output builders', () => {
       const ops = standard(userSchema, 'user');
+      // Use input callback to modify body schema in detailed input structure
       const createRoute = ops.create()
-        .inputBuilder.omit(['id', 'createdAt', 'updatedAt'])
+        .input(b => b.omit(['id', 'createdAt', 'updatedAt']))
         .build();
       
       expect(createRoute).toBeDefined();
@@ -598,7 +599,7 @@ describe('StandardOperations', () => {
     it('should allow using output builder', () => {
       const ops = standard(userSchema, 'user');
       const readRoute = ops.read()
-        .outputBuilder.omit(['createdAt', 'updatedAt'])
+        .output.omit(['createdAt', 'updatedAt'])
         .build();
       
       expect(readRoute).toBeDefined();

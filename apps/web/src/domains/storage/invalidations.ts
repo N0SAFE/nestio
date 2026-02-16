@@ -40,7 +40,7 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
    */
   bucketDelete: ({ input, keys }) => [
     keys.bucketList(),
-    keys.bucketExists({ input: { name: input.name } }),
+    keys.bucketExists({ input: { params: { name: input.params.name } } }),
   ],
   
   // =============================================================================
