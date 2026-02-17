@@ -32,7 +32,6 @@ import {
     type QueryBuilder,
 } from "./utils";
 import { RouteBuilder } from "../../builder/route-builder";
-import { ListOperationBuilder } from "./list-builder";
 
 /**
  * Zod entity schema type - requires ZodObject for schema manipulation
@@ -117,6 +116,10 @@ export class ZodStandardOperations<
     TIdField extends string = "id",
     TIdSchema extends z.ZodType = InferIdSchema<TEntity, TIdField>,
 > extends BaseStandardOperations<TEntity, TIdField, TIdSchema> {
+    public getEntitySchema(): TEntity {
+        return this.entitySchema;
+    }
+
     protected getDefaultIdSchema(): TIdSchema {
         const shape = this.entitySchema.shape;
         return (shape[this.idField] ?? z.string()) as TIdSchema;
@@ -344,73 +347,14 @@ export class ZodStandardOperations<
     // ==================== List Operations ====================
 
     /**
-     * Create a fluent list operation builder
-     * 
-     * Returns a builder that allows chaining configuration methods for a cleaner API.
-     * 
-     * @returns ListOperationBuilder for fluent configuration
-     * 
-     * @example
-     * ```typescript
-     * const userListContract = userOps
-     *   .listBuilder()
-     *   .withPagination({ defaultLimit: 20, maxLimit: 100 })
-     *   .withSorting(['name', 'email', 'createdAt'], { 
-     *     defaultField: 'createdAt', 
-     *     defaultDirection: 'desc' 
-     *   })
-     *   .withFiltering({
-     *     name: { schema: z.string(), operators: ['eq', 'like'] },
-     *     email: z.string().email()
-     *   })
-     *   .withSearch(['name', 'email'])
-     *   .build();
-     * 
-     * // Export schemas for reuse:
-     * export const userListSchemas = userOps
-     *   .listBuilder()
-     *   .withPagination({ defaultLimit: 20 })
-     *   .withSorting(['name', 'email'])
-     *   .getSchemas();
-     * ```
-     */
-    listBuilder(): ListOperationBuilder<TEntity> {
-        return new ListOperationBuilder(
-            this as unknown as ZodStandardOperations<TEntity, string, z.ZodType>,
-            this.entitySchema,
-        );
-    }
-
-    /**
-     * Build a list route from a pre-configured QueryBuilder.
-     * 
-     * Unlike list(), this method takes a QueryBuilder<TConfig> directly,
-     * preserving the exact TConfig type parameter through the chain.
-     * Used by ListOperationBuilder to create properly typed contracts.
-     */
-    buildListRoute<TConfig extends QueryConfig>(queryBuilder: QueryBuilder<TConfig>) {
-        const inputSchema = queryBuilder.buildInputSchema();
-        const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
-
-        return this.createBuilder({
-            method: "GET",
-            summary: `List ${this.entityName}s`,
-            description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
-        })
-            .path("/")
-            .input((b) => b.query(inputSchema))
-            .output(outputSchema);
-    }
-
-    /**
      * List operation with config-based query builder (preserves exact types)
      */
     list<TConfig extends ZodListOperationOptions>(options: TConfig): RouteBuilder<
         ObjectSchema<{
-            query: z.ZodType<ComputeInputSchema<QueryConfigFromOptions<TConfig>>>;
-            params: AnySchema;
-            body: AnySchema;
-            headers: AnySchema;
+            query: z.ZodType<
+                ComputeInputSchema<QueryConfigFromOptions<TConfig>>,
+                ComputeInputSchema<QueryConfigFromOptions<TConfig>>
+            >;
         }>,
         z.ZodType<ComputeOutputSchema<QueryConfigFromOptions<TConfig>, z.infer<TEntity>>>,
         "GET",
@@ -422,13 +366,10 @@ export class ZodStandardOperations<
      */
     list(): RouteBuilder<
         ObjectSchema<{
-            query: z.ZodObject<{
+            query: z.ZodOptional<z.ZodObject<{
                 limit: z.ZodOptional<z.ZodNumber>;
                 offset: z.ZodOptional<z.ZodNumber>;
-            }>;
-            params: AnySchema;
-            body: AnySchema;
-            headers: AnySchema;
+            }>>;
         }>,
         z.ZodObject<{
             data: z.ZodArray<TEntity>;
@@ -449,9 +390,6 @@ export class ZodStandardOperations<
     list(options: BaseListPlainOptions): RouteBuilder<
         ObjectSchema<{
             query: AnySchema;
-            params: AnySchema;
-            body: AnySchema;
-            headers: AnySchema;
         }>,
         z.ZodType,
         "GET",
@@ -461,9 +399,6 @@ export class ZodStandardOperations<
     list(options?: ZodListOperationOptions | BaseListPlainOptions): RouteBuilder<
         ObjectSchema<{
             query: AnySchema;
-            params: AnySchema;
-            body: AnySchema;
-            headers: AnySchema;
         }>,
         z.ZodType,
         "GET",
@@ -480,16 +415,13 @@ export class ZodStandardOperations<
                 description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
             })
                 .path("/")
-                .input((b) => b.query(inputSchema))
+                .input(z.object({ query: inputSchema.optional() }))
                 .output(outputSchema) as unknown as RouteBuilder<
                     ObjectSchema<{
-                        query: z.ZodObject<{
+                        query: z.ZodOptional<z.ZodObject<{
                             limit: z.ZodOptional<z.ZodNumber>;
                             offset: z.ZodOptional<z.ZodNumber>;
-                        }>;
-                        params: AnySchema;
-                        body: AnySchema;
-                        headers: AnySchema;
+                        }>>;
                     }>,
                     z.ZodObject<{
                         data: z.ZodArray<TEntity>;
@@ -516,13 +448,10 @@ export class ZodStandardOperations<
                 description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
             })
                 .path("/")
-                .input((b) => b.query(inputSchema))
+                .input(z.object({ query: inputSchema.optional() }))
                 .output(outputSchema) as unknown as RouteBuilder<
                     ObjectSchema<{
                         query: AnySchema;
-                        params: AnySchema;
-                        body: AnySchema;
-                        headers: AnySchema;
                     }>,
                     z.ZodType,
                     "GET",
@@ -541,13 +470,10 @@ export class ZodStandardOperations<
                 description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
             })
                 .path("/")
-                .input((b) => b.query(inputSchema))
+                .input(z.object({ query: inputSchema.optional() }))
                 .output(outputSchema) as unknown as RouteBuilder<
                     ObjectSchema<{
                         query: AnySchema;
-                        params: AnySchema;
-                        body: AnySchema;
-                        headers: AnySchema;
                     }>,
                     z.ZodType,
                     "GET",
@@ -565,13 +491,10 @@ export class ZodStandardOperations<
             description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
         })
             .path("/")
-            .input((b) => b.query(inputSchema))
+            .input(z.object({ query: inputSchema.optional() }))
             .output(outputSchema) as unknown as RouteBuilder<
                 ObjectSchema<{
                     query: AnySchema;
-                    params: AnySchema;
-                    body: AnySchema;
-                    headers: AnySchema;
                 }>,
                 z.ZodType,
                 "GET",
@@ -805,7 +728,7 @@ export class ZodStandardOperations<
             description: `Full-text search for ${this.entityName}s with pagination`,
         })
             .path("/search")
-            .input((b) => b.query(inputSchema))
+            .input(z.object({ query: inputSchema.optional() }))
             .output(outputSchema);
     }
 
@@ -1268,7 +1191,7 @@ export class ZodStandardOperations<
                 description: `Real-time streaming list of ${this.entityName}s via EventIterator`,
             })
                 .path(streamPath)
-                .input((b) => b.query(inputSchema));
+                .input(z.object({ query: inputSchema.optional() }));
             
             return builder.output((b) => b.body.streamed(outputSchema));
         };
@@ -1329,7 +1252,7 @@ export class ZodStandardOperations<
             description: `Real-time streaming search for ${this.entityName}s`,
         })
             .path("/search/streaming")
-            .input((b) => b.query(inputSchema));
+            .input(z.object({ query: inputSchema.optional() }));
         
         return builder.output(b => b.body.streamed(outputSchema));
     }
