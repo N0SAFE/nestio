@@ -12,7 +12,6 @@ import {
   Controls,
   MiniMap,
   type NodeTypes,
-  type EdgeTypes,
   type Node,
   type Edge,
   type OnNodesChange,

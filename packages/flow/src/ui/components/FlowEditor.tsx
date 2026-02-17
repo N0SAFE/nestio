@@ -14,20 +14,17 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
-  addEdge,
   type Connection,
   type NodeTypes,
-  type EdgeTypes,
   BackgroundVariant,
-  type Edge,
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { FlowEditorProps, ReactFlowNode, ReactFlowEdge, DebugModeConfig, FlowNodeData } from '../types';
+import type { FlowEditorProps, ReactFlowNode, ReactFlowEdge, FlowNodeData } from '../types';
 import type { FlowPlugin } from '../../core/types/plugin';
-import type { FlowNode as FlowNodeType, FlowEdge as FlowEdgeType } from '../../core/types/flow';
-import type { SubFlow, SubFlowViewState, InternalNode } from '../../core/types/subflow';
+import type { FlowNode as FlowNodeType } from '../../core/types/flow';
+import type { SubFlow, InternalNode } from '../../core/types/subflow';
 import { useFlowStore } from '../store/flowStore';
 import { FlowNode } from './nodes/FlowNode';
 import { SubFlowNode, type SubFlowNodeData } from './nodes/SubFlowNode';

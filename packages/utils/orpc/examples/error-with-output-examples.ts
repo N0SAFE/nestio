@@ -11,7 +11,7 @@
  * KEY INSIGHT: Error statuses DON'T create new responses - they use existing output variants!
  */
 
-import { RouteBuilder } from '../src/builder/route-builder';
+import { RouteBuilder } from '../src/builder/core/route-builder';
 import { z } from 'zod/v4';
 
 // Common error response schema for consistency across all routes

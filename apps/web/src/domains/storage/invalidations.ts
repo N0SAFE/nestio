@@ -40,7 +40,7 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
    */
   bucketDelete: ({ input, keys }) => [
     keys.bucketList(),
-    keys.bucketExists({ input: input.params.name }),
+    keys.bucketExists({ input: { params: { name: input.params.name } } }),
   ],
   
   // =============================================================================
@@ -58,8 +58,6 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
       input: {
         params: { bucket: input.params.bucket },
         query: {},
-        body: {},
-        headers: {},
       },
     }),
     // Also invalidate with the specific prefix if it exists
@@ -70,8 +68,6 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
             query: {
               prefix: input.body.objectName.substring(0, input.body.objectName.lastIndexOf('/') + 1),
             },
-            body: {},
-            headers: {},
           } 
         })]
       : []),
@@ -90,8 +86,6 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
       input: {
         params: { bucket: input.params.bucket },
         query: {},
-        body: {},
-        headers: {},
       },
     }),
     // Also invalidate with the specific prefix if it exists
@@ -102,8 +96,6 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
             query: {
               prefix: input.params.objectName.substring(0, input.params.objectName.lastIndexOf('/') + 1),
             },
-            body: {},
-            headers: {},
           } 
         })]
       : []),

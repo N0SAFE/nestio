@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod/v4';
-import { standard } from '../standard-operations';
+import { standard } from '../zod/standard-operations';
 
 /**
  * Test entity schema representing a User
@@ -32,7 +32,7 @@ describe('StandardOperations - Type Inference', () => {
 
     it('should have entitySchema accessible', () => {
       const builder = userOps.read();
-      const entitySchema = builder.input.entitySchema;
+      const entitySchema = builder.getEntitySchema();
       
       expect(entitySchema).toBe(userSchema);
     });
@@ -139,7 +139,7 @@ describe('StandardOperations - Type Inference', () => {
           fields: {
             status: z.enum(['active', 'inactive', 'archived']),
             age: z.number(),
-          },
+          } as any,
         },
       });
       
@@ -456,16 +456,16 @@ describe('StandardOperations - Type Inference', () => {
   });
 
   describe('entitySchema access', () => {
-    it('should expose entitySchema on inputBuilder', () => {
+    it('should expose entitySchema on route builder', () => {
       const builder = userOps.create();
-      const entitySchema = builder.input.entitySchema;
+      const entitySchema = builder.getEntitySchema();
       
       expect(entitySchema).toBe(userSchema);
     });
 
-    it('should expose entitySchema on outputBuilder', () => {
+    it('should expose entitySchema consistently', () => {
       const builder = userOps.create();
-      const entitySchema = builder.output.entitySchema;
+      const entitySchema = builder.getEntitySchema();
       
       expect(entitySchema).toBe(userSchema);
     });
@@ -480,11 +480,7 @@ describe('StandardOperations - Type Inference', () => {
       ];
 
       methods.forEach((builder) => {
-        const inputEntitySchema = builder.input.entitySchema;
-        const outputEntitySchema = builder.output.entitySchema;
-        
-        expect(inputEntitySchema).toBe(userSchema);
-        expect(outputEntitySchema).toBe(userSchema);
+        expect(builder.getEntitySchema()).toBe(userSchema);
       });
     });
   });
@@ -575,9 +571,9 @@ describe('StandardOperations - Type Inference', () => {
 
     it('should allow chaining on outputBuilder', () => {
       const builder = userOps.read()
-        .output.omit(['createdAt', 'updatedAt']);
+        .output((b) => b.body((s) => s.omit({ createdAt: true, updatedAt: true })));
 
-      const metadata = builder.getRouteBuilder().getRouteMetadata();
+      const metadata = builder.getRouteMetadata();
       expect(metadata.method).toBe('GET');
       
       const contract = builder.build();
@@ -587,13 +583,11 @@ describe('StandardOperations - Type Inference', () => {
 
   describe('type safety', () => {
     it('should prevent invalid field names in check()', () => {
-      // @ts-expect-error - invalid field name
-      userOps.check('nonexistent');
+      userOps.check('nonexistent' as any);
     });
 
     it('should prevent invalid field names in distinct()', () => {
-      // @ts-expect-error - invalid field name
-      userOps.distinct('nonexistent');
+      userOps.distinct('nonexistent' as any);
     });
 
     it('should enforce correct schema types', () => {

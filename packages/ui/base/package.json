@@ -10,14 +10,14 @@
         "./src/index.ts",
         "./src/index.tsx"
       ],
-      "import": "./src/index.ts"
+      "import": "./dist/index.mjs"
     },
     "./*": {
       "types": [
         "./src/*.ts",
         "./src/*.tsx"
       ],
-      "import": "./src/*"
+      "import": "./dist/*"
     },
     "./styles/globals.css": "./src/styles/globals.css"
   },

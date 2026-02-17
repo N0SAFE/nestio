@@ -27,5 +27,5 @@
     }
   },
   "include": ["**/*", "modules", "index.ts", "common"],
-  "exclude": ["node_modules", "dist", "eslint.config.ts"]
+  "exclude": ["node_modules", "dist"]
 }

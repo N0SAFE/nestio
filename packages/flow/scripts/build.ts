@@ -81,6 +81,7 @@ async function runBuild(files: string[], watch: boolean) {
       entry: entryPoints,
       outDir: "dist",
       format: ["esm"],
+      dts: true,
       target: "es2020",
       sourcemap: true,
       clean: false,

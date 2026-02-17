@@ -11,7 +11,7 @@ This package provides a powerful builder pattern for creating ORPC API contracts
 This is an internal workspace package. Import it in your code:
 
 ```typescript
-import { standard, RouteBuilder, SchemaBuilder } from "@repo/orpc-utils";
+import { standard, RouteBuilder } from "@repo/orpc-utils";
 ```
 
 ## Quick Start
@@ -263,30 +263,6 @@ new RouteBuilder(route?, input?, output?)
 **Build:**
 - `.build()` - Build and return the ORPC contract
 
-### SchemaBuilder
-
-Builder for standalone schema transformations.
-
-#### Constructor
-```typescript
-new SchemaBuilder(schema)
-```
-
-#### Methods
-
-- `.pick(keys)` - Pick specific fields
-- `.omit(keys)` - Omit specific fields
-- `.partial()` - Make all fields optional
-- `.required()` - Make all fields required
-- `.extend(extension)` - Add new fields
-- `.merge(other)` - Merge with another schema
-- `.nullable()` - Make schema nullable
-- `.optional()` - Make schema optional
-- `.default(value)` - Add default value
-- `.describe(description)` - Add description
-- `.custom(modifier)` - Apply custom transformation
-- `.build()` - Build and return the Zod schema
-
 ## Examples
 
 ### Basic CRUD
@@ -350,11 +326,9 @@ const customContract = new RouteBuilder()
 
 ### Schema Transformations
 ```typescript
-import { SchemaBuilder } from "@repo/orpc-utils";
-
-const publicUserSchema = new SchemaBuilder(userSchema)
-  .omit(["email", "password"])
-  .extend({ profileUrl: z.string().url() })
+const publicUserRoute = new RouteBuilder({ method: "GET" })
+  .input((b) => b.omit(["email", "password"]))
+  .output((b) => b.extend({ profileUrl: z.string().url() }))
   .build();
 ```
 

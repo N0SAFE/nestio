@@ -43,7 +43,7 @@ export function useBuckets() {
 export function useBucketExists(bucketName: string, options?: { enabled?: boolean }) {
   return useQuery(
     storageEndpoints.bucketExists.queryOptions({ 
-      input: bucketName,
+      input: { params: { name: bucketName } },
       enabled: options?.enabled ?? !!bucketName,
     }),
   );

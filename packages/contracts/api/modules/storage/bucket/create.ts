@@ -7,5 +7,5 @@ const bucketOps = standard.zod(bucketSchema, 'bucket');
 // Create bucket contract - Only accept name as input
 export const bucketCreateContract = bucketOps
   .create()
-  .input((b) => b.entitySchema.pick(['name']))
+  .input((b) => b.entitySchema.pick({name: true}))
   .build();

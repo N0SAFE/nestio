@@ -49,7 +49,7 @@ export class FlowBuilder {
    * Add a node to the flow
    */
   addNode(node: Omit<FlowNode, 'id'> & { id?: string }): this {
-    const nodeId = node.id || `node-${++this.nodeCounter}`;
+    const nodeId = node.id ?? `node-${String(++this.nodeCounter)}`;
     this.nodes.push({
       ...node,
       id: nodeId,
@@ -60,7 +60,7 @@ export class FlowBuilder {
   /**
    * Add multiple nodes
    */
-  addNodes(nodes: Array<Omit<FlowNode, 'id'> & { id?: string }>): this {
+  addNodes(nodes: (Omit<FlowNode, 'id'> & { id?: string })[]): this {
     nodes.forEach(node => this.addNode(node));
     return this;
   }
@@ -78,13 +78,13 @@ export class FlowBuilder {
       label?: string;
     }
   ): this {
-    const edgeId = `edge-${++this.edgeCounter}`;
+    const edgeId = `edge-${String(++this.edgeCounter)}`;
     this.edges.push({
       id: edgeId,
       source,
       target,
-      sourceHandle: options?.sourceHandle || 'output',
-      targetHandle: options?.targetHandle || 'input',
+      sourceHandle: options?.sourceHandle ?? 'output',
+      targetHandle: options?.targetHandle ?? 'input',
       condition: options?.condition,
       label: options?.label,
     });
@@ -95,7 +95,7 @@ export class FlowBuilder {
    * Add a flow variable
    */
   addVariable(variable: Omit<FlowVariable, 'id'> & { id?: string }): this {
-    const varId = variable.id || `var-${this.variables.length + 1}`;
+    const varId = variable.id ?? `var-${String(this.variables.length + 1)}`;
     this.variables.push({
       ...variable,
       id: varId,
@@ -107,12 +107,11 @@ export class FlowBuilder {
    * Add metadata to the flow
    */
   addMetadata(key: string, value: unknown): this {
-    if (!this.flow.metadata) {
-      this.flow.metadata = {
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    }
+    this.flow.metadata ??= {
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     (this.flow.metadata as unknown as Record<string, unknown>)[key] = value;
     return this;
   }
@@ -129,12 +128,12 @@ export class FlowBuilder {
       id: this.flow.id,
       name: this.flow.name,
       description: this.flow.description,
-      version: this.flow.version || '1.0.0',
+      version: this.flow.version ?? '1.0.0',
       nodes: this.nodes,
       edges: this.edges,
       variables: this.variables,
       subFlows: [],
-      metadata: this.flow.metadata || {
+      metadata: this.flow.metadata ?? {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -248,7 +247,7 @@ export function createFlow(id: string, name: string): FlowBuilder {
  */
 export function fromFlow(flow: Flow): FlowBuilder {
   const builder = new FlowBuilder(flow.id, flow.name);
-  builder.description(flow.description || '');
+  builder.description(flow.description ?? '');
   builder.version(flow.version);
   
   flow.nodes.forEach(node => builder.addNode(node));

@@ -11,12 +11,4 @@ export const bucketExistsContract = bucketOps
     idFieldName: 'name',
     idSchema: z.string().min(3).max(63),
   })
-  .input(b =>
-    z.uuid()
-  )
-  .output(b =>
-    bucketSchema.extend({
-      name: z.string(),
-    })
-  )
   .build();

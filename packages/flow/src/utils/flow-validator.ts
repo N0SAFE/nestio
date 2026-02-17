@@ -4,7 +4,7 @@
  * Comprehensive validation for flow structure, configuration, and integrity.
  */
 
-import type { Flow, FlowNode, FlowEdge } from '../core/types/flow';
+import type { Flow } from '../core/types/flow';
 import { pluginRegistry } from '../core/plugins/registry';
 
 export interface ValidationError {
@@ -77,7 +77,7 @@ function validateBasicStructure(flow: Flow, errors: ValidationError[]): void {
     });
   }
 
-  if (!flow.nodes || !Array.isArray(flow.nodes)) {
+  if (!Array.isArray(flow.nodes)) {
     errors.push({
       severity: 'error',
       code: 'FLOW_INVALID_NODES',
@@ -85,7 +85,7 @@ function validateBasicStructure(flow: Flow, errors: ValidationError[]): void {
     });
   }
 
-  if (!flow.edges || !Array.isArray(flow.edges)) {
+  if (!Array.isArray(flow.edges)) {
     errors.push({
       severity: 'error',
       code: 'FLOW_INVALID_EDGES',
@@ -161,7 +161,7 @@ function validateNodes(
     }
 
     // Validate position
-    if (!node.position || typeof node.position.x !== 'number' || typeof node.position.y !== 'number') {
+    if (typeof node.position.x !== 'number' || typeof node.position.y !== 'number') {
       warnings.push({
         severity: 'warning',
         code: 'NODE_INVALID_POSITION',
@@ -404,7 +404,7 @@ function detectCycles(flow: Flow): boolean {
     visited.add(nodeId);
     inStack.add(nodeId);
 
-    const neighbors = adjacency.get(nodeId) || [];
+    const neighbors = adjacency.get(nodeId) ?? [];
     for (const neighbor of neighbors) {
       if (!visited.has(neighbor)) {
         if (hasCycle(neighbor)) {

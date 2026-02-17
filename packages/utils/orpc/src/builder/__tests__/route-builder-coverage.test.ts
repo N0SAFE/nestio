@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod/v4";
-import { RouteBuilder, route } from "../route-builder";
+import { RouteBuilder, route } from "../core/route-builder";
 
 /**
- * Additional tests for route-builder.ts coverage
+ * Additional tests for core/route-builder.ts coverage
  * Targets uncovered lines and edge cases
  */
 
@@ -32,16 +32,14 @@ describe("RouteBuilder - Coverage Tests", () => {
         });
     });
 
-    describe("DetailedOutputBuilder union building", () => {
+    describe("Output variant union building", () => {
         it("should build union with multiple variants", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output((b) =>
-                    b.detailed((d) =>
-                        d.union([
-                            d.status(200).body(z.object({ found: z.literal(true), data: z.any() })),
-                            d.status(404).body(z.object({ found: z.literal(false), message: z.string() })),
-                        ]),
-                    ),
+                    b.union([
+                        b.status(200).body(z.object({ found: z.literal(true), data: z.any() })),
+                        b.status(404).body(z.object({ found: z.literal(false), message: z.string() })),
+                    ]),
                 )
                 .build();
 
@@ -50,11 +48,7 @@ describe("RouteBuilder - Coverage Tests", () => {
 
         it("should build union with single variant (edge case)", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
-                .output((b) =>
-                    b.detailed((d) =>
-                        d.union([d.status(200).body(z.object({ success: z.boolean() }))]),
-                    ),
-                )
+                .output((b) => b.union([b.status(200).body(z.object({ success: z.boolean() }))]))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -63,13 +57,11 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should build union with three variants", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output((b) =>
-                    b.detailed((d) =>
-                        d.union([
-                            d.status(200).body(z.object({ status: z.literal("ok") })),
-                            d.status(400).body(z.object({ status: z.literal("bad_request") })),
-                            d.status(500).body(z.object({ status: z.literal("error") })),
-                        ]),
-                    ),
+                    b.union([
+                        b.status(200).body(z.object({ status: z.literal("ok") })),
+                        b.status(400).body(z.object({ status: z.literal("bad_request") })),
+                        b.status(500).body(z.object({ status: z.literal("error") })),
+                    ]),
                 )
                 .build();
 
@@ -77,16 +69,14 @@ describe("RouteBuilder - Coverage Tests", () => {
         });
     });
 
-    describe("OutputVariantBuilder methods", () => {
+    describe("Output variant methods", () => {
         it("should create variant with description", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output((b) =>
-                    b.detailed((d) =>
-                        d.union([
-                            d.status(200).body(z.object({ data: z.any() })).description("Success response"),
-                            d.status(404).body(z.object({ error: z.string() })).description("Not found response"),
-                        ]),
-                    ),
+                    b.union([
+                        b.status(200).body(z.object({ data: z.any() })),
+                        b.status(404).body(z.object({ error: z.string() })),
+                    ]),
                 )
                 .build();
 
@@ -96,12 +86,10 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should create variant with headers", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output((b) =>
-                    b.detailed((d) =>
-                        d.union([
-                            d.status(200).body(z.object({ items: z.array(z.any()) })).headers({ "x-total-count": z.string() }),
-                            d.status(204),
-                        ]),
-                    ),
+                    b.union([
+                        b.status(200).body(z.object({ items: z.array(z.any()) })).headers({ "x-total-count": z.string() }),
+                        b.status(204),
+                    ]),
                 )
                 .build();
 
@@ -109,16 +97,16 @@ describe("RouteBuilder - Coverage Tests", () => {
         });
     });
 
-    describe("DetailedOutputBuilder build methods", () => {
+    describe("Output builder structured methods", () => {
         it("should build single detailed output with status only", () => {
-            const routeResult = new RouteBuilder({ method: "DELETE" }).output((b) => b.detailed((d) => d.status(204))).build();
+            const routeResult = new RouteBuilder({ method: "DELETE" }).output((b) => b.status(204)).build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
         });
 
         it("should build single detailed output with headers only", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
-                .output((b) => b.detailed((d) => d.headers({ etag: z.string() })))
+                .output((b) => b.headers({ etag: z.string() }))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -126,7 +114,7 @@ describe("RouteBuilder - Coverage Tests", () => {
 
         it("should build single detailed output with body only", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
-                .output((b) => b.detailed((d) => d.body(z.object({ message: z.string() }))))
+                .output((b) => b.body(z.object({ message: z.string() })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -201,7 +189,7 @@ describe("RouteBuilder - Coverage Tests", () => {
     describe("updateRoute method", () => {
         it("should update route config", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
-                .output((b) => b.status(200, z.object({ data: z.any() })))
+                .output((b) => b.status(200).body(z.object({ data: z.any() })))
                 .updateRoute({ outputStructure: "detailed" })
                 .build();
 
@@ -213,7 +201,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use pick on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid(), name: z.string(), password: z.string() }))
-                .output((b) => b.pick(["id", "name"]))
+                .output((b) => b.body((s) => s.pick({ id: true, name: true })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -222,7 +210,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use omit on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid(), name: z.string(), password: z.string() }))
-                .output((b) => b.omit(["password"]))
+                .output((b) => b.body((s) => s.omit({ password: true })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -231,7 +219,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use extend on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid() }))
-                .output((b) => b.extend({ createdAt: z.date() }))
+                .output((b) => b.body((s) => s.extend({ createdAt: z.date() })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -240,7 +228,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use partial on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid(), name: z.string() }))
-                .output((b) => b.partial())
+                .output((b) => b.body((s) => s.partial()))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -249,7 +237,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use partial with specific keys on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid(), name: z.string(), email: z.email() }))
-                .output((b) => b.partial(["name"]))
+                .output((b) => b.body((s) => s.partial({ name: true })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -258,7 +246,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use nullable on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid() }))
-                .output((b) => b.nullable())
+                .output((b) => b.body((s) => s.nullable()))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -267,7 +255,7 @@ describe("RouteBuilder - Coverage Tests", () => {
         it("should use custom modifier on output", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
                 .output(z.object({ id: z.uuid() }))
-                .output((b) => b.custom((schema) => z.object({ wrapped: schema })))
+                .output((b) => b.body((schema) => z.object({ wrapped: schema })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -317,12 +305,12 @@ describe("RouteBuilder - Coverage Tests", () => {
     });
 
     describe("Errors method", () => {
-        it("should define errors with object pattern", () => {
+        it("should define errors with builder pattern", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
-                .errors({
-                    NOT_FOUND: { message: "Resource not found", status: 404 },
-                    UNAUTHORIZED: { message: "Not authorized", status: 401 },
-                })
+                .errors((e) => [
+                    e().code("NOT_FOUND").message("Resource not found").status(404),
+                    e().code("UNAUTHORIZED").message("Not authorized").status(401),
+                ])
                 .output(z.object({ data: z.any() }))
                 .build();
 
@@ -384,7 +372,7 @@ describe("RouteBuilder - Coverage Tests", () => {
 
         it("should create detailed output with status() and body", () => {
             const routeResult = new RouteBuilder({ method: "GET" })
-                .output((b) => b.status(201, z.object({ id: z.uuid() })))
+                .output((b) => b.status(201).body(z.object({ id: z.uuid() })))
                 .build();
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
@@ -400,19 +388,5 @@ describe("RouteBuilder - Coverage Tests", () => {
 
             expect(routeResult["~orpc"].outputSchema).toBeDefined();
         });
-    });
-});
-
-describe("RouteBuilder - getRouteBuilder delegation", () => {
-    it("should return underlying RouteBuilder from output proxy's getRouteBuilder", () => {
-        const builder = new RouteBuilder({ method: "GET" }).output(z.object({ data: z.string() }));
-        const proxyResult = builder.output;
-
-        // The proxy should have getRouteBuilder method
-        const proxy = proxyResult;
-        if (typeof proxy.getRouteBuilder === "function") {
-            const innerBuilder = proxy.getRouteBuilder();
-            expect(innerBuilder).toBeInstanceOf(RouteBuilder);
-        }
     });
 });

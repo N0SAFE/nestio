@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { RouteBuilder } from '../route-builder';
+import { RouteBuilder } from '../core/route-builder';
 
 describe('Unified Input/Output API', () => {
   const userSchema = z.object({
@@ -57,7 +57,8 @@ describe('Unified Input/Output API', () => {
     it('can mix direct schema and builder callback approaches', () => {
       const route = new RouteBuilder({ method: 'POST', path: '/users' })
         .input(userSchema)  // Direct schema first
-        .input(builder => builder.body(b => b.schema(s => s.omit({ password: true }))))  // Then builder callback
+        .input(b => b.schema.omit({ password: true }))  // Then property chaining
+        .input(builder => builder.body(b => b.schema(s => s.omit({ createdAt: true }))))  // Then builder callback
         .build();
 
       expect(route).toBeDefined();
@@ -77,11 +78,11 @@ describe('Unified Input/Output API', () => {
 
     it('supports builder callback pattern with detailed structure', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
-        .output(builder => builder.detailed(d => d
+        .output(builder => builder
           .status(200)
           .body(userSchema.omit({ password: true }))
           .headers({ 'etag': z.string() })
-        ))
+        )
         .build();
 
       expect(route).toBeDefined();
@@ -91,7 +92,7 @@ describe('Unified Input/Output API', () => {
     it('supports builder callback pattern with property modifications', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
         .output(userSchema)
-        .output(builder => builder.omit(['password', 'createdAt']))
+        .output(builder => builder.schema.omit(['password', 'createdAt']))
         .build();
 
       expect(route).toBeDefined();
@@ -101,8 +102,8 @@ describe('Unified Input/Output API', () => {
     it('can chain multiple output calls', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
         .output(userSchema)
-        .output(builder => builder.omit(['password']))
-        .output(builder => builder.pick(['id', 'name', 'email']))
+        .output(builder => builder.schema.omit({ password: true }))
+        .output(builder => builder.schema.pick({ id: true, name: true, email: true }))
         .build();
 
       expect(route).toBeDefined();
@@ -133,7 +134,7 @@ describe('Unified Input/Output API', () => {
     it('outputBuilder property access still works', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
         .output(userSchema)
-        .output(builder => builder.omit(['password', 'createdAt']))
+        .output(builder => builder.schema.omit(['password', 'createdAt']))
         .build();
 
       expect(route).toBeDefined();
@@ -142,10 +143,9 @@ describe('Unified Input/Output API', () => {
 
     it('outputBuilder callable still works', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
-        .output(builder => builder.detailed(d => d
+        .output(builder => builder
           .status(200)
-          .body(userSchema)
-        ))
+          .body(userSchema))
         .build();
 
       expect(route).toBeDefined();
@@ -159,11 +159,11 @@ describe('Unified Input/Output API', () => {
         .input(builder => builder
           .body(userSchema.omit({ id: true, createdAt: true }))  // No ID on create
         )
-        .output(builder => builder.detailed(d => d
-          .status(201)
+        .output(builder => 
+          builder.status(201)
           .body(userSchema)
           .headers({ 'location': z.string() })
-        ))
+        )
         .build();
 
       expect(createRoute).toBeDefined();
@@ -171,8 +171,8 @@ describe('Unified Input/Output API', () => {
 
     it('update route with path params and partial body', () => {
       const updateRoute = new RouteBuilder({ method: 'PATCH', path: '/{id}' })
-        .pathWithParams(p => p`/users/${p('id', z.string())}`)
         .input(builder => builder
+          .params(p => p`/users/${p('id', z.string())}`)
           .body(userSchema.omit({ id: true, createdAt: true }).partial())
         )
         .output(userSchema)

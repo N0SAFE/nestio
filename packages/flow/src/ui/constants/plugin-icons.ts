@@ -13,15 +13,11 @@ import {
   Repeat,
   RotateCw,
   Workflow,
-  Phone,
   Pin,
   Shuffle,
   Zap,
   Box,
   ArrowRight,
-  MessageSquare,
-  Tag,
-  Menu,
   type LucideIcon,
 } from 'lucide-react';
 import type { GradientColorKey } from './gradient-colors';

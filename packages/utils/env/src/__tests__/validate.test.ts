@@ -24,6 +24,7 @@ describe('API Environment Validation', () => {
     API_PORT: 3001,
     AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
     BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
+    STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
     NEXT_PUBLIC_API_URL: 'http://localhost:3001',
   }
 
@@ -356,6 +357,7 @@ describe('All Apps Environment Validation', () => {
       API_PORT: 3001,
       AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
       BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
+      STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
       NEXT_PUBLIC_API_URL: 'http://localhost:3001',
     },
     web: {
@@ -436,6 +438,7 @@ describe('Edge Cases and Error Handling', () => {
         API_PORT: 0,
         AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
         BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
+        STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
       }
       expect(() => validateApiEnv(env)).toThrow()
     })
@@ -449,6 +452,7 @@ describe('Edge Cases and Error Handling', () => {
         API_PORT: 70000,
         AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
         BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
+        STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
       }
       expect(() => validateApiEnv(env)).toThrow()
     })
@@ -462,6 +466,7 @@ describe('Edge Cases and Error Handling', () => {
         API_PORT: 1,
         AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
         BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
+        STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
       }
       const result = validateApiEnv(env)
       expect(result.API_PORT).toBe(1)
@@ -476,6 +481,7 @@ describe('Edge Cases and Error Handling', () => {
         API_PORT: 65535,
         AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
         BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-chars-long',
+        STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
       }
       const result = validateApiEnv(env)
       expect(result.API_PORT).toBe(65535)

@@ -6,8 +6,6 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { FlowExecutor } from '../../core/engine/executor';
-import { pluginRegistry } from '../../core/plugins/registry';
-import type { Flow } from '../../core/types/flow';
 import { useFlowStore } from '../store/flowStore';
 import { nanoid } from 'nanoid';
 
@@ -42,13 +40,13 @@ export function useFlowExecution() {
       // Listen to execution events
       const context = executor.getContext();
       
-      context.events.on('node:start', (data: any) => {
+      context.events.on('node:start', (data) => {
         updateExecutionState({
           currentNodeId: data.nodeId,
         });
       });
 
-      context.events.on('node:complete', (data: any) => {
+      context.events.on('node:complete', (data) => {
         updateExecutionState({
           completedNodes: new Set([
             ...Array.from(executionState.completedNodes),
@@ -57,7 +55,7 @@ export function useFlowExecution() {
         });
       });
 
-      context.events.on('variable:set', (data: any) => {
+      context.events.on('variable:set', (data) => {
         updateExecutionState({
           variables: {
             ...executionState.variables,

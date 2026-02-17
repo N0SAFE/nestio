@@ -21,6 +21,7 @@ describe('EnvService', () => {
       AUTH_BASE_DOMAIN: 'localhost',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/testdb',
       AUTH_SECRET: 'test-auth-secret',
+      STORAGE_SECRET_KEY: 'test-storage-secret-key-at-least-32-chars-long',
       API_PORT: '3001',
     };
     

@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils";
 import { HeaderWithIcon } from "./header-with-icon";
 
 export function BaseNode({ className, ...props }: ComponentProps<"div">) {
@@ -55,7 +55,7 @@ export function BaseNodeHeader({
         <div
           className={cn(
             "absolute h-full w-3/5 bg-gradient-to-r to-transparent",
-            gradientColor || "from-primary/40"
+            gradientColor ?? "from-primary/40"
           )}
         />
       </div>

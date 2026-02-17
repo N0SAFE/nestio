@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod/v4';
-import { RouteBuilder } from '../route-builder';
+import { RouteBuilder } from '../core/route-builder';
 
 describe('ErrorDefinitionBuilder', () => {
   it('should define errors with fluent builder syntax', () => {
@@ -48,21 +48,18 @@ describe('ErrorDefinitionBuilder', () => {
     expect(contract).toBeDefined();
   });
 
-  it('should support backward compatible object syntax', () => {
+  it('should support structured output with builder errors syntax', () => {
     const route = new RouteBuilder()
       .path('/test')
       .input(z.object({ id: z.string() }))
-      .output(d => d.detailed(d =>
-        d.status(200).body(z.object({ name: z.string() }))
-      ))
-      .errors({
-        NOT_FOUND: { message: 'Resource not found', status: 404 } as const,
-        VALIDATION_FAILED: { 
-          message: 'Validation error',
-          data: z.object({ fields: z.array(z.string()) }),
-          status: 422 
-        } as const,
-      });
+      .output(d => d.status(200).body(z.object({ name: z.string() })))
+      .errors(e => [
+        e().code('NOT_FOUND').message('Resource not found').status(404),
+        e().code('VALIDATION_FAILED')
+          .message('Validation error')
+          .data(z.object({ fields: z.array(z.string()) }))
+          .status(422),
+      ]);
 
     const contract = route.build();
     expect(contract).toBeDefined();
@@ -73,10 +70,10 @@ describe('ErrorDefinitionBuilder', () => {
       .path('/users/:id')
       .method('GET')
       .input(z.object({ params: z.object({ id: z.string() }) }))
-      .output(b => b.detailed(d => d.union([
-        d.status(200).body(z.object({ id: z.string(), name: z.string() })),
-        d.status(404).body(z.object({ error: z.string() }))
-      ])))
+      .output(b => b.union([
+        b.status(200).body(z.object({ id: z.string(), name: z.string() })),
+        b.status(404).body(z.object({ error: z.string() })),
+      ]))
       .errors(e => [
         e().code('NOT_FOUND').message('User not found').status(404),
         e().code('UNAUTHORIZED').status(401),
@@ -84,14 +81,14 @@ describe('ErrorDefinitionBuilder', () => {
 
     // Type verification: the errors should be properly typed now
     // Expected: { NOT_FOUND: { message: 'User not found', status: 404 }, UNAUTHORIZED: { status: 401 } }
-    type Errors = typeof route extends RouteBuilder<any, any, any, any, any, any, infer TErrors> ? TErrors : never;
+    type Errors = typeof route extends RouteBuilder<any, any, any, any, infer TErrors> ? TErrors : never;
     
     // Type should show 'NOT_FOUND' | 'UNAUTHORIZED' for the keys
     const _errorsCheck: keyof Errors = 'NOT_FOUND';
     void _errorsCheck; // Type check only - verify TypeScript accepts this
 
     // Type verification: the union output should be properly typed
-    type Output = typeof route extends RouteBuilder<any, infer TOutput, any, any, any, any, any> ? TOutput : never;
+    type Output = typeof route extends RouteBuilder<any, infer TOutput, any, any, any> ? TOutput : never;
     
     // Log type to see what we're getting (this will show in IDE hover)
     const _outputCheck: Output = null!;

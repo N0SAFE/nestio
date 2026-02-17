@@ -978,7 +978,7 @@ export class StorageService {
 
         const metadata = params.metadataDirective === 'REPLACE' && params.metadata
             ? params.metadata
-            : sourceObj.metadata;
+            : sourceObj.metadata ?? undefined;
 
         // Create new object record
         const newObj = await this.repository.createObject({

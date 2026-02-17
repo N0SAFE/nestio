@@ -364,10 +364,15 @@
         "zod": "catalog:utils",
       },
       "devDependencies": {
+        "@repo/config-eslint": "*",
+        "@repo/config-prettier": "*",
         "@repo/config-typescript": "*",
         "@types/node": "catalog:build",
+        "@vitest/coverage-v8": "catalog:testing",
         "chokidar": "catalog:build",
+        "eslint": "catalog:linting",
         "typescript": "catalog:build",
+        "vitest": "catalog:testing",
       },
       "peerDependencies": {
         "@orpc/contract": "catalog:orpc",

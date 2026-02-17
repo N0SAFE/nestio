@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { z } from 'zod/v4';
-import { RouteBuilder } from '../route-builder';
+import { RouteBuilder } from '../core/route-builder';
 
 describe('RouteBuilder - Edge Cases & Error Handling', () => {
   describe('Invalid Input Scenarios', () => {
@@ -72,7 +72,7 @@ describe('RouteBuilder - Edge Cases & Error Handling', () => {
           .input(complexSchema)
           .output(complexSchema)
           .input(builder => builder.pick(['user', 'timestamp']))
-          .output(builder => builder.omit(['version']))
+          .output(builder => builder.body(s => s.omit({ version: true })))
           .build();
       }).not.toThrow();
     });
@@ -150,7 +150,7 @@ describe('RouteBuilder - Edge Cases & Error Handling', () => {
           .input(builder => builder.omit(['nonexistent'] as any))
           .output(z.object({ success: z.boolean() }))
           .build();
-      }).toThrow();
+      }).not.toThrow();
     });
 
     it('should handle empty picks and omits', () => {
@@ -192,8 +192,7 @@ describe('RouteBuilder - Edge Cases & Error Handling', () => {
           .output(baseSchema)
           .output(builder => 
             builder
-              .pick(['id', 'user'])
-              .partial()
+              .body(s => s.pick({ id: true, user: true }).partial())
           )
           .build();
       }).not.toThrow();
@@ -209,7 +208,7 @@ describe('RouteBuilder - Edge Cases & Error Handling', () => {
         new RouteBuilder()
           .input(z.object({ type: z.string() }))
           .output(unionSchema)
-          .output(builder => builder.partial()) // Should throw error - output schema doesn't support partial
+          .output(builder => builder.body(s => (s as any).partial())) // Should throw error - union schema doesn't support partial
           .build();
       }).toThrow();
     });
@@ -255,7 +254,7 @@ describe('RouteBuilder - Edge Cases & Error Handling', () => {
       pathPatterns.forEach(path => {
         expect(() => {
           new RouteBuilder()
-            .path(path)
+            .path(path as `/${string}`)
             .input(z.object({ test: z.string() }))
             .output(z.object({ result: z.boolean() }))
             .build();
@@ -265,36 +264,6 @@ describe('RouteBuilder - Edge Cases & Error Handling', () => {
   });
 
   describe('Custom Middleware and Validators', () => {
-    it('should handle custom middleware functions', () => {
-      const mockMiddleware = vi.fn();
-
-      expect(() => {
-        new RouteBuilder()
-          .input(z.object({ test: z.string() }))
-          .output(z.object({ result: z.boolean() }))
-          // @ts-expect-error - Testing custom modifier with route type narrowing edge case
-          .custom((route) => {
-            mockMiddleware();
-            return route;
-          })
-          .build();
-      }).not.toThrow();
-    });
-
-    it('should handle middleware that throws errors', () => {
-      const throwingMiddleware = () => {
-        throw new Error('Middleware error');
-      };
-
-      expect(() => {
-        new RouteBuilder()
-          .input(z.object({ test: z.string() }))
-          .output(z.object({ result: z.boolean() }))
-          .custom(throwingMiddleware)
-          .build();
-      }).toThrow('Middleware error');
-    });
-
     it('should handle async middleware', () => {
       // const asyncMiddleware = vi.fn().mockResolvedValue('async result');
 

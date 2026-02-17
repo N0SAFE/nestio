@@ -5,19 +5,19 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": ["./src/index.ts", "./src/index.tsx"],
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./ui": {
-      "types": ["./src/ui/index.ts", "./src/ui/index.tsx"],
+      "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
     "./plugins": {
-      "types": ["./src/plugins/index.ts", "./src/plugins/index.tsx"],
+      "types": "./dist/plugins/index.d.ts",
       "import": "./dist/plugins/index.js"
     },
     "./*": {
-      "types": ["./src/*.ts", "./src/*.tsx"],
+      "types": "./dist/*.d.ts",
       "import": "./dist/*.js"
     }
   },

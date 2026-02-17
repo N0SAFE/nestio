@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod/v4';
-import { RouteBuilder } from '../route-builder';
+import { RouteBuilder } from '../core/route-builder';
 
 describe('Output Builder API Consistency', () => {
   const userSchema = z.object({
@@ -24,10 +24,10 @@ describe('Output Builder API Consistency', () => {
     it('should support direct schema pattern (existing)', () => {
       const route = new RouteBuilder({ method: 'POST', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .body(b => b.schema(schema => schema.omit({ password: true, createdAt: true })))  // Direct
-        ))
+          .body(schema => schema.omit({ password: true, createdAt: true }))
+        )
         .build();
 
       // Contract was built successfully
@@ -39,12 +39,10 @@ describe('Output Builder API Consistency', () => {
       // This is the key test - output builder should work like input builder
       const route = new RouteBuilder({ method: 'POST', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .body(bodyBuilder => bodyBuilder.schema(schema => 
-            schema.omit({ password: true, createdAt: true })  // Builder callback - NEW!
-          ))
-        ))
+          .body(schema => schema.omit({ password: true, createdAt: true }))
+        )
         .build();
 
       // Contract was built successfully - the builder pattern worked!
@@ -57,13 +55,13 @@ describe('Output Builder API Consistency', () => {
       
       new RouteBuilder({ method: 'POST', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .body(bodyBuilder => bodyBuilder.schema(schema => {
+          .body(schema => {
             receivedSchema = schema;
             return schema.omit({ password: true });
-          }))
-        ))
+          })
+        )
         .build();
 
       // The builder should receive the userSchema, not z.void()
@@ -76,14 +74,14 @@ describe('Output Builder API Consistency', () => {
     it('should support direct schema pattern (existing)', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .headers({  // Direct
+          .headers({
             'etag': z.string(),
             'last-modified': z.string(),
           })
           .body(userSchema)
-        ))
+        )
         .build();
 
       expect(route).toBeDefined();
@@ -93,16 +91,16 @@ describe('Output Builder API Consistency', () => {
     it('should support builder callback pattern with schema access (NEW)', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .headers(h => h.schema(() =>  // Builder callback - NEW!
+          .headers(() =>
             z.object({
               'content-type': z.string(),
               'x-custom': z.string(),
-            })
-          ))
+            }),
+          )
           .body(userSchema)
-        ))
+        )
         .build();
 
       expect(route).toBeDefined();
@@ -137,18 +135,18 @@ describe('Output Builder API Consistency', () => {
       // Both patterns now work for OUTPUT (matching INPUT API)
       const route1 = new RouteBuilder({ method: 'POST', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .body(userSchema.pick({ id: true, name: true }))  // ✅ Direct
-        ))
+          .body(userSchema.pick({ id: true, name: true }))
+        )
         .build();
 
       const route2 = new RouteBuilder({ method: 'POST', path: '/users' })
         .output(userSchema)
-        .output(b => b.detailed(d => d
+        .output(b => b
           .status(200)
-          .body(b => b.schema(s => s.pick({ id: true, name: true })))  // ✅ Builder callback (NEW!)
-        ))
+          .body(s => s.pick({ id: true, name: true }))
+        )
         .build();
 
       expect(route1).toBeDefined();
@@ -164,23 +162,23 @@ describe('Output Builder API Consistency', () => {
 
     it('supports the new callback API (recommended)', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users/:id' })
-        .output(b => b.detailed(d => d.union([
-          d.status(200).body(userSchema),
-          d.status(404).body(errorSchema),
-          d.status(500).body(errorSchema)
-        ])))
+        .output(b => b.union([
+          b.status(200).body(userSchema),
+          b.status(404).body(errorSchema),
+          b.status(500).body(errorSchema),
+        ]))
         .build();
 
       expect(route).toBeDefined();
       expect(typeof route).toBe('object');
     });
 
-    it('supports the old array API (backward compatible)', () => {
+    it('supports direct union array API', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users/:id' })
-        .output(b => b.detailed(d => d.union([
-          d.status(200).body(userSchema),
-          d.status(404).body(errorSchema)
-        ])))
+        .output(b => b.union([
+          b.status(200).body(userSchema),
+          b.status(404).body(errorSchema),
+        ]))
         .build();
 
       expect(route).toBeDefined();
@@ -189,12 +187,12 @@ describe('Output Builder API Consistency', () => {
 
     it('works with headers in union variants', () => {
       const route = new RouteBuilder({ method: 'GET', path: '/users/:id' })
-        .output(b => b.detailed(d => d.union([
-          d.status(200).headers({ 'etag': z.string() }).body(userSchema),
-          d.status(304)
+        .output(b => b.union([
+          b.status(200).headers({ 'etag': z.string() }).body(userSchema),
+          b.status(304)
             .headers({ 'etag': z.string() })
-            .body(z.void())
-        ])))
+            .body(z.void()),
+        ]))
         .build();
 
       expect(route).toBeDefined();

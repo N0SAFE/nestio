@@ -27,9 +27,6 @@ import {
   Trash2,
   GripVertical,
   Check,
-  X,
-  Edit2,
-  Copy,
   Braces,
   ArrowRight,
 } from 'lucide-react';
@@ -109,11 +106,11 @@ function buildSchemaTree(
     children: [],
   };
 
-  if (schema.type === 'object' && schema.properties) {
+  if (schema.type === 'object') {
     node.children = Object.entries(schema.properties).map(([key, childSchema]) =>
       buildSchemaTree(childSchema, path === 'root' ? '' : path, key)
     );
-  } else if (schema.type === 'array' && schema.items) {
+  } else if (schema.type === 'array') {
     // Show array items as [n] notation
     node.children = [
       buildSchemaTree(schema.items, path, '[*]'),
@@ -140,7 +137,7 @@ function TypeBadge({ type }: { type: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn('text-[10px] font-mono', colors[type] ?? colors['any'])}
+      className={cn('text-[10px] font-mono', colors[type] ?? colors.any)}
     >
       {type}
     </Badge>
@@ -304,7 +301,6 @@ function PickRow({
 export function DataPickerBuilder({
   value,
   onChange,
-  variables,
   sourceSchema,
   disabled,
   className,
@@ -324,7 +320,7 @@ export function DataPickerBuilder({
 
   // Handle field selection
   const handleFieldSelect = useCallback(
-    (path: string, schema: VariableSchema) => {
+    (path: string) => {
       const picks = value.picks ?? [];
       const existingIndex = picks.findIndex((p) => p.sourcePath === path);
 
@@ -488,7 +484,7 @@ export function DataPickerBuilder({
             >
               Clear All
             </Button>
-            <Button onClick={() => setDialogOpen(false)}>Done</Button>
+            <Button onClick={() => {setDialogOpen(false)}}>Done</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -496,7 +492,7 @@ export function DataPickerBuilder({
       {/* Compact Preview */}
       {picksCount > 0 && (
         <div className="text-xs text-muted-foreground space-y-1">
-          {value.picks!.slice(0, 3).map((pick) => (
+          {value.picks.slice(0, 3).map((pick) => (
             <div key={pick.id} className="flex items-center gap-1">
               <code className="px-1 bg-muted rounded">{pick.sourcePath}</code>
               <ArrowRight className="h-2.5 w-2.5" />
