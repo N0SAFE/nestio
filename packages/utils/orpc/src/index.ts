@@ -9,12 +9,21 @@ export {
     zodStandard,
     createZodStandardOperations,
     BaseStandardOperations,
+    ListOperationBuilder,
     type ZodEntitySchema,
     type ZodEntityOperationOptions,
     type EntityOperationOptions,
     type ListOperationOptions,
     type ListPlainOptions,
+    type BuilderFilterField,
 } from "./standard";
+
+// Explicitly re-export the standard module's ComputeInputSchema/ComputeOutputSchema
+// (overrides the query module's version which uses flattened filter fields)
+export type {
+    ComputeInputSchema,
+    ComputeOutputSchema,
+} from "./standard/zod/utils/query-builder";
 
 // Convenience re-exports for most common use cases
 export { RouteBuilder, route } from "./builder/route-builder";

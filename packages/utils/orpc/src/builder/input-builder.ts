@@ -7,10 +7,10 @@
 import type { AnySchema } from "./types";
 import type { 
     ObjectSchema,
-    AnyObjectSchema,
     VoidSchema,
     SchemaShape,
     OptionalSchema,
+    ShouldBeOptional,
 } from "./standard-schema-helpers";
 import { 
     emptyObjectSchema as createEmptyObjectSchema, 
@@ -18,7 +18,8 @@ import {
     optionalSchema,
     objectSchema,
 } from "./standard-schema-helpers";
-import { AsyncIteratorClass, eventIterator, Schema } from "@orpc/contract";
+import { AsyncIteratorClass, eventIterator } from "@orpc/contract";
+import type { Schema } from "@orpc/contract";
 import type { 
     PathParam,
     PathParamBuilderWithExisting,
@@ -140,10 +141,10 @@ export class HeadersBuilder<
  * ```
  */
 export class DetailedInputBuilder<
-    TParams extends AnySchema = AnyObjectSchema,
-    TQuery extends AnySchema = AnyObjectSchema,
+    TParams extends AnySchema = VoidSchema,
+    TQuery extends AnySchema = VoidSchema,
     TBody extends AnySchema = VoidSchema,
-    THeaders extends AnySchema = AnyObjectSchema,
+    THeaders extends AnySchema = VoidSchema,
     TEntitySchema extends AnySchema = VoidSchema,
 > {
     public readonly $params: TParams;
@@ -485,31 +486,83 @@ export class DetailedInputBuilder<
     }
 
     /**
+     * Omit fields from the current body schema (or entity schema when body is not object-like).
+     */
+    omit(fields: readonly string[]): DetailedInputBuilder<TParams, TQuery, AnySchema, THeaders, TEntitySchema> {
+        const target = this._resolveObjectSchemaTarget();
+        if (!("omit" in target) || typeof target.omit !== "function") {
+            throw new Error("omit() can only be called on object schemas");
+        }
+
+        const omitRecord = Object.fromEntries(fields.map((field) => [field, true])) as Record<string, true>;
+        const schema = (target as { omit: (shape: Record<string, true>) => AnySchema }).omit(omitRecord);
+        return new DetailedInputBuilder(this.$params, this.$query, schema, this.$headers, this.$entitySchema, this._pendingPath);
+    }
+
+    /**
+     * Pick fields from the current body schema (or entity schema when body is not object-like).
+     */
+    pick(fields: readonly string[]): DetailedInputBuilder<TParams, TQuery, AnySchema, THeaders, TEntitySchema> {
+        const target = this._resolveObjectSchemaTarget();
+        if (!("pick" in target) || typeof target.pick !== "function") {
+            throw new Error("pick() can only be called on object schemas");
+        }
+
+        const pickRecord = Object.fromEntries(fields.map((field) => [field, true])) as Record<string, true>;
+        const schema = (target as { pick: (shape: Record<string, true>) => AnySchema }).pick(pickRecord);
+        return new DetailedInputBuilder(this.$params, this.$query, schema, this.$headers, this.$entitySchema, this._pendingPath);
+    }
+
+    /**
+     * Make all or selected fields optional on the current body schema.
+     */
+    partial(fields?: readonly string[]): DetailedInputBuilder<TParams, TQuery, AnySchema, THeaders, TEntitySchema> {
+        const target = this._resolveObjectSchemaTarget();
+        if (!("partial" in target) || typeof target.partial !== "function") {
+            throw new Error("partial() can only be called on object schemas");
+        }
+
+        const schema = (target as { partial: (shape?: readonly string[]) => AnySchema }).partial(fields);
+        return new DetailedInputBuilder(this.$params, this.$query, schema, this.$headers, this.$entitySchema, this._pendingPath);
+    }
+
+    /**
+     * Extend the current body schema with additional fields.
+     */
+    extend(shape: Record<string, unknown>): DetailedInputBuilder<TParams, TQuery, AnySchema, THeaders, TEntitySchema> {
+        const target = this._resolveObjectSchemaTarget();
+        if (!("extend" in target) || typeof target.extend !== "function") {
+            throw new Error("extend() can only be called on object schemas");
+        }
+
+        const schema = (target as { extend: (shape: Record<string, unknown>) => AnySchema }).extend(shape);
+        return new DetailedInputBuilder(this.$params, this.$query, schema, this.$headers, this.$entitySchema, this._pendingPath);
+    }
+
+    private _resolveObjectSchemaTarget(): AnySchema {
+        if (typeof this.$body === "object") {
+            return this.$body;
+        }
+        return this.$entitySchema;
+    }
+
+    /**
      * Build the final detailed input schema
-     * Empty fields (void, never, empty objects, or all-optional objects) are made optional
+     * Fields are made optional only when they are void/never or object schemas with all-optional properties
      * Returns properly typed ObjectSchema with shape preservation for type inference
      * @internal
      */
     _build(): ObjectSchema<{
-        params: TParams extends ObjectSchema<Record<never, never>> ? OptionalSchema<TParams> : TParams;
-        query: TQuery extends ObjectSchema<Record<never, never>> ? OptionalSchema<TQuery> : TQuery;
-        body: TBody;
-        headers: THeaders extends ObjectSchema<Record<never, never>> ? OptionalSchema<THeaders> : THeaders;
+        params: ShouldBeOptional<TParams> extends true ? OptionalSchema<TParams> : TParams;
+        query: ShouldBeOptional<TQuery> extends true ? OptionalSchema<TQuery> : TQuery;
+        body: ShouldBeOptional<TBody> extends true ? OptionalSchema<TBody> : TBody;
+        headers: ShouldBeOptional<THeaders> extends true ? OptionalSchema<THeaders> : THeaders;
     }> {
         // Build shape with properly typed fields - preserves generics for inference
         const paramsOptional = shouldBeOptional(this.$params);
         const queryOptional = shouldBeOptional(this.$query);
         const bodyOptional = shouldBeOptional(this.$body);
         const headersOptional = shouldBeOptional(this.$headers);
-        
-        // Debug
-        if (this._pendingPath) {
-            console.log('[_build] pendingPath:', this._pendingPath, 'params optional:', paramsOptional);
-            if (typeof this.$params === 'object' && '~standard' in this.$params) {
-                const paramsShape = (this.$params as unknown as Record<symbol, unknown>)[Symbol.for("standard-schema:shape")];
-                console.log('[_build] params shape keys:', paramsShape && typeof paramsShape === 'object' ? Object.keys(paramsShape) : 'not object');
-            }
-        }
         
         const shape = {
             params: paramsOptional ? optionalSchema(this.$params) : this.$params,
@@ -528,10 +581,10 @@ export class DetailedInputBuilder<
         // TypeScript can't evaluate conditional types from runtime branching,
         // so we assert the return type which is guaranteed by the runtime logic above
         return schema as unknown as ObjectSchema<{
-            params: TParams extends ObjectSchema<Record<never, never>> ? OptionalSchema<TParams> : TParams;
-            query: TQuery extends ObjectSchema<Record<never, never>> ? OptionalSchema<TQuery> : TQuery;
-            body: TBody;
-            headers: THeaders extends ObjectSchema<Record<never, never>> ? OptionalSchema<THeaders> : THeaders;
+            params: ShouldBeOptional<TParams> extends true ? OptionalSchema<TParams> : TParams;
+            query: ShouldBeOptional<TQuery> extends true ? OptionalSchema<TQuery> : TQuery;
+            body: ShouldBeOptional<TBody> extends true ? OptionalSchema<TBody> : TBody;
+            headers: ShouldBeOptional<THeaders> extends true ? OptionalSchema<THeaders> : THeaders;
         }>;
     }
 }
@@ -540,7 +593,6 @@ export class DetailedInputBuilder<
  * Check if a schema should be optional in the detailed input
  * A schema is optional if:
  * - It's void or never
- * - It's an empty object (no properties)
  * - It's an object where ALL properties are optional
  */
 function shouldBeOptional(schema: AnySchema): boolean {
@@ -560,9 +612,9 @@ function shouldBeOptional(schema: AnySchema): boolean {
             if (!shape) return false;
             
             const keys = Object.keys(shape);
-            
-            // Empty object - optional
-            if (keys.length === 0) return true;
+
+            // Empty object - never optionalized by shape emptiness alone
+            if (keys.length === 0) return false;
             
             // All fields optional - make the whole thing optional
             return keys.every(key => {

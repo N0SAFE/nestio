@@ -1,333 +1,110 @@
 # Nestio - MinIO-like S3 Object Storage API
 
-A modern, full-stack S3-compatible object storage system featuring a NestJS backend API, Next.js web interface, and TypeScript SDK with end-to-end type safety.
+Production-oriented monorepo for a custom S3-compatible storage platform built with:
 
-## Features
+- **Web**: Next.js App Router
+- **API**: NestJS + ORPC contracts
+- **Auth**: Better Auth
+- **DB**: PostgreSQL + Drizzle (metadata)
+- **Storage**: Filesystem object storage + S3-compatible semantics
+- **Monorepo**: Turborepo + Bun workspaces
 
-- 🗄️ **S3-Compatible Storage**: MinIO-based object storage with bucket and object management
-- 🔐 **Secure Access**: Presigned URLs for temporary secure access to objects
-- 🚀 **Full-Stack Setup**: Next.js frontend + NestJS backend API + MinIO storage
-- 📦 **Monorepo Structure**: Organized with Turborepo for efficient development
-- 🎨 **Modern UI**: Shadcn UI components with Tailwind CSS
-- 🔐 **Authentication**: Integrated Better Auth with NestJS
-- 🛣️ **Type-Safe API**: ORPC contracts for end-to-end type safety
-- 📱 **SDK Support**: TypeScript SDK for easy integration
-- 🔧 **Development Tools**: ESLint, Prettier, and TypeScript configurations
-- 🐳 **Docker-First**: Complete containerized development and production environments
+## Why this project
 
-## Prerequisites
+- S3-style bucket/object model with modern DX
+- End-to-end type safety (contracts shared between API and web)
+- Docker-first local development
+- Clear domain boundaries and reusable packages
+- Opinionated docs and architecture patterns out of the box
 
-- Bun 1.2.14+ (primary)
-- Node.js 20+ (fallback)
-- Docker + Docker Compose
+## Quick start
 
-## Getting Started
-
-1. **Clone the Repository**
-   ```bash
-   git clone [your-repo-url]
-   cd nextjs-nestjs-turborepo-template
-   ```
-
-2. **Configure Git Hooks (Required for lint-staged)**
-   ```bash
-   git config --local core.hooksPath .husky
-   ```
-   This configures Git to use the Husky hooks in the repository. You only need to run this once after cloning.
-
-3. **Initialize the Project**
-   ```bash
-   bun run init 
-   ```
-   This will guide you through an interactive setup to configure your environment
-
-4. **Set Upstream Remote for Updates**
-   To keep your project up to date with the original template, add an `upstream` remote:
-   ```bash
-   git remote add upstream https://github.com/N0SAFE/nextjs-nestjs-turborepo-template.git
-   # To fetch and rebase updates from the template later:
-   git fetch upstream
-   git rebase upstream/main
-   ```
-   Or use the provided script:
-   ```bash
-   bun run add:upstream
-   ```
-   This will automatically add the upstream remote if it does not exist.
-
-4. **Configure Project Name (Optional)**
-   To avoid conflicts when running multiple projects, set a unique project name in your `.env` file:
-   ```bash
-   COMPOSE_PROJECT_NAME=my-unique-project-name
-   ```
-   See [Project Isolation Guide](./docs/PROJECT-ISOLATION.md) for details.
-
-5. **Start Development Servers**
-   ```bash
-   bun --bun dev
-   ```
-   This starts:
-   - Next.js at http://localhost:3000
-   - NestJS API at http://localhost:3001
-   - MinIO Storage at http://localhost:9000
-   - MinIO Console at http://localhost:9001
-
-## Storage API Usage
-
-### Using the REST API
+### 1) Clone and initialize
 
 ```bash
-# List all buckets
-curl http://localhost:3001/storage/
-
-# Create a bucket
-curl -X POST http://localhost:3001/storage/ -H "Content-Type: application/json" -d '{"name":"my-bucket"}'
-
-# List objects in a bucket
-curl http://localhost:3001/storage/my-bucket/objects
-
-# Generate presigned upload URL
-curl -X POST http://localhost:3001/storage/my-bucket/objects/myfile.txt/presigned-upload-url
-
-# Generate presigned download URL
-curl -X POST http://localhost:3001/storage/my-bucket/objects/myfile.txt/presigned-url
+git clone https://github.com/N0SAFE/nestio.git
+cd nestio
+bun run init
+bun install
 ```
 
-### Using the TypeScript SDK (Coming Soon)
-
-```typescript
-import { StorageClient } from '@repo/storage-sdk';
-
-const storage = new StorageClient({
-  apiUrl: 'http://localhost:3001',
-  authToken: 'your-auth-token',
-});
-
-// Create a bucket
-await storage.createBucket('my-bucket');
-
-// Upload a file
-const uploadUrl = await storage.getPresignedUploadUrl('my-bucket', 'file.txt');
-await fetch(uploadUrl, { method: 'PUT', body: fileData });
-
-// Download a file
-const downloadUrl = await storage.getPresignedDownloadUrl('my-bucket', 'file.txt');
-```
-
-## Project Structure
-
-### Apps
-- `web/`: Next.js frontend application
-  - Storage management interface
-  - Bucket and object browser
-  - File upload/download UI
-  - Shadcn UI components
-  - Better Auth integration
-
-- `api/`: NestJS backend
-  - MinIO S3-compatible storage API
-  - ORPC type-safe endpoints
-  - Bucket management (create, list, delete)
-  - Object operations (upload, download, delete, list)
-  - Presigned URL generation
-  - Better Auth configuration
-  - PostgreSQL integration
-
-### Packages
-- `ui/`: Shared React component library
-- `contracts/`: ORPC type-safe API contracts for storage operations
-- `eslint-config/`: Shared ESLint configurations
-- `prettier-config/`: Shared Prettier configurations
-- `tailwind-config/`: Shared Tailwind CSS configuration
-- `tsconfig/`: Shared TypeScript configurations
-- `types/`: Shared TypeScript types
-- `utils/env`: Centralized environment variable schemas with Zod validation
-
-## Development Workflow
-
-1. **Running the Full Development Environment**
-   ```bash
-   bun --bun dev # Starts all services (API + Web + Database + Redis)
-   ```
-
-2. **Running Services Separately (for independent development)**
-   ```bash
-   # API only (includes database and Redis)
-   bun run dev:api
-   
-   # Web only (connects to external API)
-   bun run dev:web
-   
-   # Build and run with fresh images
-   bun run dev:api:build
-   bun run dev:web:build
-   
-   # Stop services
-   bun run dev:api:down
-   bun run dev:web:down
-   
-   # View logs
-   bun run dev:api:logs
-   bun run dev:web:logs
-   ```
-
-3. **Building for Production**
-   ```bash
-   bun --bun build # Builds all apps and packages
-   ```
-
-4. **Running Tests**
-   ```bash
-   bun --bun test # Runs tests across all packages
-   ```
-
-5. **Linting and Formatting**
-   ```bash
-   bun --bun lint # Run ESLint
-   bun --bun format # Run Prettier
-   ```
-
-## Adding New Components
-
-1. Use Shadcn UI CLI to add new components:
-   ```bash
-   bun --bun ui:add [component-name]
-   ```
-
-2. Components will be available in `packages/ui/components/`
-
-## Deployment
-
-### Frontend (Next.js)
-- Optimized for Vercel deployment
-- Supports other platforms (AWS, DigitalOcean, etc.)
-
-### Backend (NestJS)
-- Deploy to any Node.js hosting platform or via Docker
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- [Turborepo](https://turbo.build/)
-- [Next.js](https://nextjs.org/)
-- [NestJS](https://nestjs.com/)
-- [ORPC](https://orpc.io/)
-- [Better Auth](https://better-auth.com/)
-- [Tailwind CSS](https://tailwindcss.com/) for styles
-- [Shadcn UI](https://ui.shadcn.com/) for ui components
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-- [Better Auth](https://better-auth.com/) for authentication
-- [PostgreSQL](https://www.postgresql.org/) for database
-- [Drizzle ORM](https://orm.drizzle.team/) for type-safe database operations
-- [tsup](https://github.com/egoist/tsup) for bundling
-- [declarative-routing](https://github.com/ProNextJS/declarative-routing/blob/main/docs/nextjs.md) for routing
-
-## Deployment Options
-
-This template supports multiple deployment strategies:
-
-### 1. Combined Docker Compose (Development/Single Server)
-
-Deploy both API and web app together:
+### 2) Start development
 
 ```bash
-# Development
-bun --bun docker:dev
-# or
-docker-compose -f docker-compose.dev.yml up
-
-# Production
-bun --bun docker:prod
-# or
-docker-compose -f docker-compose.prod.yml up --build
+bun run dev
 ```
 
-### 2. Production Deployments (Separate Services)
+By default this starts the full dev stack (web, api, db, redis, and storage services) using Docker compose.
 
-For production, deploy API and web app separately for better scalability and security.
-
-#### Deploy API in Production
+### 3) Validate the workspace
 
 ```bash
-# Copy production environment template
-cp .env.api.prod.example .env
-# Update variables for your production environment
-
-# Start API services
-bun --bun prod:api:build
-# or
-docker-compose -f docker-compose.api.prod.yml up --build
+bun run check
 ```
 
-#### Deploy Web App in Production (requires running API)
+## Most used commands
 
 ```bash
-# Copy production environment template
-cp .env.web.prod.example .env
-# Update NEXT_PUBLIC_API_URL to point to your production API server
-
-# Start web app
-bun --bun prod:web:build
-# or
-docker-compose -f docker-compose.web.prod.yml up --build
+bun run dev
+bun run dev:api
+bun run dev:web
+bun run test
+bun run build
+bun run lint
+bun run format
+bun run check
 ```
 
-### 3. Available Scripts
+## Storage notes
 
-```bash
-# Combined Development
-bun --bun docker:dev          # Start combined development environment
+- API storage endpoints are provided by the `storage` module in `apps/api`.
+- Common local endpoints during development:
+  - Web: `http://localhost:3000`
+  - API: `http://localhost:3005`
+  - MinIO API: `http://localhost:9000`
+  - MinIO Console: `http://localhost:9001`
 
-# Combined Production
-bun --bun docker:prod         # Start combined production environment
+## Project layout
 
-# Production API Only
-bun --bun prod:api            # Start API services
-bun --bun prod:api:build      # Build and start API services
-bun --bun prod:api:down       # Stop API services
-bun --bun prod:logs:api       # View API logs
-
-# Production Web Only
-bun --bun prod:web            # Start web app
-bun --bun prod:web:build      # Build and start web app
-bun --bun prod:web:down       # Stop web app
-bun --bun prod:logs:web       # View web app logs
+```text
+apps/
+  api/      NestJS API
+  web/      Next.js app
+  doc/      Fumadocs app
+packages/
+  contracts/  Shared API contracts
+  ui/         Shared UI packages
+  utils/      Shared runtime/build utilities
+  configs/    Shared lint/ts/prettier/tailwind configs
+.docs/        Main documentation hub
+docs/         Additional deep-dive design notes
 ```
-
-### 4. Production Deployment Guide
-
-For detailed production deployment instructions, see [PRODUCTION-DEPLOYMENT.md](./docs/PRODUCTION-DEPLOYMENT.md).
-
-**Benefits of production deployment:**
-- Scale API and web app independently
-- Deploy to different servers/regions
-- Better security isolation
-- Easier maintenance and updates
-- Optimized for production environments
 
 ## Documentation
 
-Start here: ./docs/README.md
+Start here:
 
-- Architecture: ./docs/ARCHITECTURE.md
-- Tech stack: ./docs/TECH-STACK.md
-- Getting started: ./docs/GETTING-STARTED.md
-- Development workflow: ./docs/DEVELOPMENT-WORKFLOW.md
-- Concepts: ./docs/concepts
+- **Main docs hub**: [`.docs/README.md`](./.docs/README.md)
+- Navigation helper: [`.docs/NAVIGATION.md`](./.docs/NAVIGATION.md)
 
----
+Primary paths:
 
-<!-- Removed legacy single-server snippet in favor of PRODUCTION-DEPLOYMENT.md -->
+- Core concepts: [`.docs/core-concepts/README.md`](./.docs/core-concepts/README.md)
+- Guides: [`.docs/guides/README.md`](./.docs/guides/README.md)
+- Features: [`.docs/features/README.md`](./.docs/features/README.md)
+- Reference: [`.docs/reference/README.md`](./.docs/reference/README.md)
+- Planning: [`.docs/planning/README.md`](./.docs/planning/README.md)
+
+Additional architecture notes:
+
+- [docs/README.md](./docs/README.md)
+
+## Contributing
+
+1. Follow root and scoped `AGENTS.md` instructions
+2. Keep contracts, API implementation, and web hooks aligned
+3. Update docs whenever behavior or workflows change
+
+## License
+
+MIT

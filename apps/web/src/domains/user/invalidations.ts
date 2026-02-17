@@ -7,6 +7,15 @@
 import { defineInvalidations } from "../shared/helpers";
 import { userEndpoints } from "./endpoints";
 
+function resolveUserId(input: unknown): string | undefined {
+  if (!input || typeof input !== "object") {
+    return undefined;
+  }
+
+  const candidate = input as { id?: string; params?: { id?: string } };
+  return candidate.id ?? candidate.params?.id;
+}
+
 /**
  * User invalidation configuration
  *
@@ -17,16 +26,16 @@ import { userEndpoints } from "./endpoints";
  */
 export const userInvalidations = defineInvalidations(userEndpoints, {
   create: ({ keys }) => [keys.list(), keys.count()],
-  update: ({ input, keys }) => [
-    // Invalidate ALL findById queries matching this params.id (regardless of other query/body params)
-    // Both mutation and query use detailed input: { params: { id }, query, body, headers }
-    keys.findById.predicate.byParams({ id: input.params.id }),
-    keys.list(),
-  ],
-  delete: ({ input, keys }) => [
-    // Invalidate ALL findById queries matching this params.id (regardless of other query/body params)
-    keys.findById.predicate.byParams({ id: input.params.id }),
-    keys.list(),
-    keys.count(),
-  ],
+  update: ({ input, keys }) => {
+    const userId = resolveUserId(input);
+    return userId
+      ? [keys.findById({ input: { params: { id: userId } } }), keys.list()]
+      : [keys.list()];
+  },
+  delete: ({ input, keys }) => {
+    const userId = resolveUserId(input);
+    return userId
+      ? [keys.findById({ input: { params: { id: userId } } }), keys.list(), keys.count()]
+      : [keys.list(), keys.count()];
+  },
 });

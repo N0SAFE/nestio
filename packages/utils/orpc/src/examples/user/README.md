@@ -85,7 +85,7 @@ import { standard, createPaginationConfigSchema, createSortingConfigSchema } fro
 import { userSchema } from '../entity';
 import { z } from 'zod';
 
-const userOps = standard(userSchema, 'user');
+const userOps = standard.zod(userSchema, 'user');
 
 // === BASIC OPERATIONS ===
 

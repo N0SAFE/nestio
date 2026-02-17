@@ -37,26 +37,26 @@ declare module "@orpc/nest" {
 }
 
 @Module({
-  imports: [
-    EnvModule,
-    DatabaseModule,
-    AuthModule.forRootAsync({
-      imports: [DatabaseModule, EnvModule],
-      useFactory: createBetterAuth,
-      inject: [DATABASE_CONNECTION, EnvService],
-      disableBodyParser: false,
-      disableGlobalAuthGuard: true,
-    }),
-    HealthModule,
-    UserModule,
-    OrganizationModule,
-    PushModule,
-    TestModule,
-    StorageModule,
-    PipelineModule,
-    ORPCModule.forRootAsync({
-      useFactory: (request: Request, authService: AuthService) => {
-        const emptyAuthUtils = authService.createEmptyAuthUtils();
+    imports: [
+        EnvModule,
+        DatabaseModule,
+        AuthModule.forRootAsync({
+            imports: [DatabaseModule, EnvModule],
+            useFactory: createBetterAuth,
+            inject: [DATABASE_CONNECTION, EnvService],
+            disableBodyParser: false,
+            disableGlobalAuthGuard: true,
+        }),
+        HealthModule,
+        UserModule,
+        PushModule,
+        TestModule,
+        OrganizationModule,
+        StorageModule,
+        PipelineModule,
+        ORPCModule.forRootAsync({
+            useFactory: (request: Request, authService: AuthService) => {
+                const emptyAuthUtils = authService.createEmptyAuthUtils();
 
                 return {
                     interceptors: [transformNestJSErrorToOrpcError(), logOrpcErrors()],

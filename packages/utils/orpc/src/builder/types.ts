@@ -22,7 +22,9 @@ export type {
     ContractProcedure,
 } from "@orpc/contract";
 
-export type { IsEqual, IsNever } from "@orpc/shared";
+// Utility types (formerly from @orpc/shared)
+export type IsEqual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+export type IsNever<T> = [T] extends [never] ? true : false;
 
 /**
  * Route metadata alias for backward compatibility
@@ -32,7 +34,7 @@ export type RouteMetadata = Route;
 /**
  * Custom modifier type for extending builder functionality
  */
-export type CustomModifier = Record<string, unknown>;
+export type CustomModifier<TInput = unknown, TOutput = unknown> = (schema: TInput) => TOutput;
 
 /**
  * Contract procedure state

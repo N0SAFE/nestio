@@ -9,7 +9,7 @@
  * - SortingSchemaOutput = BaseSortingSchemaOutput
  */
 
-import { z } from "zod/v4";
+import * as z from "zod";
 import {
     type SortingConfig as BaseSortingConfig,
     type SortingSchemaOutput as BaseSortingSchemaOutput,

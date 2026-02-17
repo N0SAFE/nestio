@@ -10,7 +10,7 @@
  * - PaginationMetaOutput uses BasePaginationMetaSchemaOutput
  */
 
-import { z } from "zod/v4";
+import * as z from "zod";
 import {
     type PaginationConfig as BasePaginationConfig,
     type PaginationSchemaOutput as BasePaginationSchemaOutput,
@@ -27,9 +27,11 @@ export { CONFIG_SYMBOL };
 /**
  * Zod schema with embedded configuration
  * Uses the same CONFIG_SYMBOL as base for cross-compatibility
+ * 
+ * This explicitly types the config-enhanced schema to ensure proper type narrowing
  */
 export type ZodSchemaWithConfig<TConfig, TSchema extends z.ZodType = z.ZodType> = TSchema & {
-    readonly [CONFIG_SYMBOL]: TConfig;
+    [CONFIG_SYMBOL]: TConfig;
 };
 
 /**
@@ -51,12 +53,17 @@ export function getConfig<T>(schema: z.ZodType): T | undefined {
 
 /**
  * Attach configuration to a schema
+ * 
+ * Mutates the schema object to add the CONFIG_SYMBOL property.
+ * Returns the same schema instance with updated type information.
  */
 export function withConfig<TConfig, TSchema extends z.ZodType>(
     schema: TSchema,
     config: TConfig
 ): ZodSchemaWithConfig<TConfig, TSchema> {
-    return Object.assign(schema, { [CONFIG_SYMBOL]: config }) as ZodSchemaWithConfig<TConfig, TSchema>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    (schema as any)[CONFIG_SYMBOL] = config;
+    return schema as ZodSchemaWithConfig<TConfig, TSchema>;
 }
 
 /**
@@ -160,11 +167,11 @@ export function createPaginationSchema<TConfig extends Partial<PaginationConfig>
     };
 
     if (paginationConfig.includeOffset) {
-        shape.offset = z.coerce.number().int().min(0).optional();
+        shape.offset = z.coerce.number().int().min(0).default(0);
     }
 
     if (paginationConfig.includePage) {
-        shape.page = z.coerce.number().int().min(1).optional();
+        shape.page = z.coerce.number().int().min(1).default(1);
     }
 
     if (paginationConfig.includeCursor) {

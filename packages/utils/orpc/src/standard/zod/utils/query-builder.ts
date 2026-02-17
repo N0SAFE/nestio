@@ -4,7 +4,7 @@
  * Fluent builder for combining pagination, sorting, filtering, and search.
  */
 
-import { z } from "zod/v4";
+import * as z from "zod";
 import {
     createPaginationSchema,
     createPaginationMetaSchema,
@@ -25,7 +25,7 @@ import {
     createFilteringSchema,
     createFilteringConfigSchema,
     type FilteringConfig,
-    type FilteringSchemaOutput,
+    type FilteringSchemaOutput
 } from "./filtering";
 import {
     createSearchSchema,
@@ -39,25 +39,43 @@ import {
 export type QueryConfig = {
     pagination?: ZodSchemaWithConfig<Partial<PaginationConfig>>;
     sorting?: ZodSchemaWithConfig<Partial<SortingConfig>>;
-    filtering?: ZodSchemaWithConfig<Partial<FilteringConfig>>;
-    search?: ZodSchemaWithConfig<Partial<SearchConfig>>;
+    filtering?: ZodSchemaWithConfig<FilteringConfig>;
+    search?: ZodSchemaWithConfig<unknown>;
 };
 
 /**
  * Compute the input schema type from a QueryConfig
  */
 export type ComputeInputSchema<TConfig extends QueryConfig> =
-    (TConfig["pagination"] extends ZodSchemaWithConfig<infer P> ? PaginationInputFields<P> : object) &
-    (TConfig["sorting"] extends ZodSchemaWithConfig<infer S> ? SortingSchemaOutput<S> : object) &
-    (TConfig["filtering"] extends ZodSchemaWithConfig<infer _F> ? { filter?: FilteringSchemaOutput } : object) &
-    (TConfig["search"] extends ZodSchemaWithConfig<infer _Se> ? { query?: string; searchFields?: string[] } : object);
+    (NonNullable<TConfig["pagination"]> extends ZodSchemaWithConfig<infer P>
+        ? P extends Partial<PaginationConfig>
+            ? PaginationInputFields<P>
+            : object
+        : object) &
+    (NonNullable<TConfig["sorting"]> extends ZodSchemaWithConfig<infer S>
+        ? S extends Partial<SortingConfig>
+            ? SortingSchemaOutput<S>
+            : object
+        : object) &
+    (NonNullable<TConfig["filtering"]> extends ZodSchemaWithConfig<infer F>
+        ? F extends FilteringConfig<infer TFields>
+            ? { filter?: FilteringSchemaOutput<TFields> }
+            : object
+        : object) &
+    (NonNullable<TConfig["search"]> extends ZodSchemaWithConfig<unknown>
+        ? { query?: string; searchFields?: string[] }
+        : object);
 
 /**
  * Compute the output schema type from a QueryConfig
  */
 export type ComputeOutputSchema<TConfig extends QueryConfig, TData> = {
     data: TData[];
-} & (TConfig["pagination"] extends ZodSchemaWithConfig<infer P> ? { meta: PaginationMetaOutput<P> } : object);
+} & (NonNullable<TConfig["pagination"]> extends ZodSchemaWithConfig<infer P>
+    ? P extends Partial<PaginationConfig>
+        ? { meta: PaginationMetaOutput<P> }
+        : object
+    : object);
 
 /**
  * Query builder options
@@ -117,7 +135,7 @@ export class QueryBuilder<TConfig extends QueryConfig = Record<string, never>> {
     /**
      * Add filtering configuration
      */
-    withFiltering<TFiltering extends ZodSchemaWithConfig<Partial<FilteringConfig>>>(
+    withFiltering<TFiltering extends ZodSchemaWithConfig<FilteringConfig>>(
         filtering: TFiltering
     ): QueryBuilder<TConfig & { filtering: TFiltering }> {
         return new QueryBuilder({
@@ -142,14 +160,14 @@ export class QueryBuilder<TConfig extends QueryConfig = Record<string, never>> {
      * Build the input schema
      * Returns a properly typed ZodObject that preserves field structure
      */
-    buildInputSchema() {
+    buildInputSchema(): z.ZodType<ComputeInputSchema<TConfig>, ComputeInputSchema<TConfig>> {
         const shape: Record<string, z.ZodType> = {};
 
         if (this.config.pagination && hasConfig(this.config.pagination)) {
             const paginationSchema = createPaginationSchema(
                 this.config.pagination as unknown as ZodSchemaWithConfig<Partial<PaginationConfig>>
             );
-            Object.assign(shape, paginationSchema.shape);
+            Object.assign(shape, (paginationSchema as unknown as z.ZodObject<z.ZodRawShape>).shape);
         }
 
         if (this.config.sorting && hasConfig(this.config.sorting)) {
@@ -170,13 +188,14 @@ export class QueryBuilder<TConfig extends QueryConfig = Record<string, never>> {
                 this.config.search as unknown as ZodSchemaWithConfig<Partial<SearchConfig>>
             );
             // Merge search fields but make query optional for combined queries
-            const searchShape = (searchSchema as z.ZodObject<z.ZodRawShape>).shape;
-            for (const [key, schema] of Object.entries(searchShape)) {
-                shape[key] = key === "query" ? schema.optional() : schema;
+            const searchShape = (searchSchema as unknown as z.ZodObject<z.ZodRawShape>).shape;
+            for (const [key, fieldSchema] of Object.entries(searchShape)) {
+                const zodField = fieldSchema as unknown as z.ZodType;
+                shape[key] = key === "query" ? zodField.optional() : zodField;
             }
         }
 
-        return z.object(shape);
+        return z.object(shape) as unknown as z.ZodType<ComputeInputSchema<TConfig>, ComputeInputSchema<TConfig>>;
     }
 
     /**
@@ -187,7 +206,7 @@ export class QueryBuilder<TConfig extends QueryConfig = Record<string, never>> {
      */
     buildOutputSchema<TItemSchema extends z.ZodType>(
         itemSchema: TItemSchema
-    ) {
+    ): z.ZodType<ComputeOutputSchema<TConfig, z.infer<TItemSchema>>, ComputeOutputSchema<TConfig, z.infer<TItemSchema>>> {
         const shape: Record<string, z.ZodType> = {
             data: z.array(itemSchema),
         };
@@ -198,7 +217,7 @@ export class QueryBuilder<TConfig extends QueryConfig = Record<string, never>> {
             );
         }
 
-        return z.object(shape);
+        return z.object(shape) as unknown as z.ZodType<ComputeOutputSchema<TConfig, z.infer<TItemSchema>>, ComputeOutputSchema<TConfig, z.infer<TItemSchema>>>;
     }
 
     /**

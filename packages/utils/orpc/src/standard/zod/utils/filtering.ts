@@ -10,7 +10,7 @@
  * - FilteringConfig = BaseFilteringConfig (identical)
  */
 
-import { z } from "zod/v4";
+import * as z from "zod";
 import {
     type FilterOperator as BaseFilterOperator,
     type FieldFilterConfig as BaseFieldFilterConfig,
@@ -48,12 +48,18 @@ export type FilterOperator = BaseFilterOperator;
 /**
  * Field filter configuration - uses base type with Zod-specific adaptations
  */
-export type FieldFilterConfig = {
+type ZodFieldFilterConfig = {
     type: "string" | "number" | "boolean" | "date" | "enum" | "array";
     operators?: FilterOperator[];
     enumValues?: readonly string[];
     nullable?: boolean;
+    /** Phantom field for carrying the resolved value type through the type system */
+    _valueType?: unknown;
+    /** Phantom field for carrying exact operator literal types through the type system */
+    _operators?: unknown;
 };
+
+export type FieldFilterConfig = ZodFieldFilterConfig | (BaseFieldFilterConfig & { _valueType?: unknown; _operators?: unknown });
 
 /**
  * Filtering configuration type - EXTENDS base type
@@ -64,9 +70,93 @@ export type FilteringConfig<TFields extends Record<string, FieldFilterConfig> = 
 };
 
 /**
- * Filtering schema output type
+ * Extract operators from a field filter config.
+ * Priority: _operators phantom → readonly operators array → type-based defaults.
  */
-export type FilteringSchemaOutput = Record<string, unknown>;
+type ExtractOperators<TConfig extends FieldFilterConfig> = 
+    TConfig extends { _operators: infer U extends FilterOperator } ? U :
+    TConfig extends { operators: readonly (infer U)[] } ? U :
+    TConfig extends { type: infer T } ? 
+        T extends "string" ? "eq" | "ne" | "like" | "ilike" | "in" | "notIn" | "contains" | "startsWith" | "endsWith" :
+        T extends "number" ? "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "in" | "notIn" | "between" :
+        T extends "boolean" ? "eq" | "ne" :
+        T extends "date" ? "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "between" :
+        T extends "enum" ? "eq" | "ne" | "in" | "notIn" :
+        T extends "array" ? "contains" | "in" :
+        "eq" | "ne"
+    : "eq" | "ne";
+
+/**
+ * Extract the value type from a FieldFilterConfig.
+ * Uses _valueType phantom if available, otherwise resolves from `type` field, else `unknown`.
+ */
+type ExtractValueType<TConfig extends FieldFilterConfig> =
+    TConfig extends { _valueType: infer V } ? unknown extends V ? (
+        TConfig extends { type: infer T } ?
+            T extends "string" ? string :
+            T extends "number" ? number :
+            T extends "boolean" ? boolean :
+            T extends "date" ? string | Date :
+            T extends "enum" ? string :
+            unknown
+        : unknown
+    ) : V : (
+        TConfig extends { type: infer T } ?
+            T extends "string" ? string :
+            T extends "number" ? number :
+            T extends "boolean" ? boolean :
+            T extends "date" ? string | Date :
+            T extends "enum" ? string :
+            unknown
+        : unknown
+    );
+
+/**
+ * Compute the value type for a specific operator.
+ * Most operators use the field's value type directly, except:
+ * - `between` → tuple [T, T]
+ * - `in`/`notIn` → array T[]
+ * - `isNull`/`isNotNull` → boolean
+ */
+type OperatorValueType<TOp extends FilterOperator, TValue> =
+    TOp extends "between" ? [TValue, TValue] :
+    TOp extends "in" | "notIn" ? TValue[] :
+    TOp extends "isNull" | "isNotNull" ? boolean :
+    TValue;
+
+/**
+ * Discriminated union entry for a field filter.
+ * Each variant has a literal `operator` and a typed `value`.
+ * e.g., { operator: 'eq'; value: string } | { operator: 'like'; value: string }
+ */
+type FieldFilterEntry<TOps extends FilterOperator, TValue> = {
+    [Op in TOps]: { operator: Op; value: OperatorValueType<Op, TValue> };
+}[TOps];
+
+/**
+ * Filtering schema output type — each field is a { operator, value } discriminated union.
+ * Supports `_and`/`_or` logical composition for complex filter expressions.
+ *
+ * Usage:
+ * ```typescript
+ * // Single field filter
+ * { email: { operator: 'eq', value: 'test@example.com' } }
+ *
+ * // Logical composition
+ * {
+ *   _and: [
+ *     { createdAt: { operator: 'gt', value: '2024-01-01' } },
+ *     { createdAt: { operator: 'lt', value: '2024-12-31' } },
+ *   ]
+ * }
+ * ```
+ */
+export type FilteringSchemaOutput<TFields extends Record<string, FieldFilterConfig>> = {
+    [K in keyof TFields]?: FieldFilterEntry<ExtractOperators<TFields[K]>, ExtractValueType<TFields[K]>>;
+} & {
+    _and?: Partial<Record<keyof TFields | "_and" | "_or", unknown>>;
+    _or?: Partial<Record<keyof TFields | "_and" | "_or", unknown>>;
+};
 
 /**
  * Create a filtering configuration schema
@@ -110,7 +200,7 @@ export function createFilteringConfigSchema<TFields extends Record<string, Field
  */
 export function createFilteringSchema<TConfig extends Partial<FilteringConfig>>(
     config: ZodSchemaWithConfig<TConfig>
-): z.ZodType<FilteringSchemaOutput> {
+): z.ZodType<TConfig extends FilteringConfig<infer TFields> ? FilteringSchemaOutput<TFields> : never> {
     const filteringConfig = getConfig<TConfig>(config);
     if (!filteringConfig) {
         throw new Error("Invalid filtering config schema");
@@ -123,41 +213,52 @@ export function createFilteringSchema<TConfig extends Partial<FilteringConfig>>(
         shape[fieldName] = createFieldFilterSchema(fieldConfig);
     }
 
-    // Add logical operators if allowed
+    // Add _and/_or logical operators if allowed
     if (filteringConfig.allowLogicalOperators) {
         const recursiveFilterSchema: z.ZodType = z.lazy(() => z.object({
-            AND: z.array(recursiveFilterSchema).optional(),
-            OR: z.array(recursiveFilterSchema).optional(),
-            NOT: recursiveFilterSchema.optional(),
+            _and: z.array(recursiveFilterSchema).optional(),
+            _or: z.array(recursiveFilterSchema).optional(),
             ...shape,
         }).partial());
-        return recursiveFilterSchema as z.ZodType<FilteringSchemaOutput>;
+        return recursiveFilterSchema as unknown as z.ZodType<TConfig extends FilteringConfig<infer TFields> ? FilteringSchemaOutput<TFields> : never>;
     }
 
-    return z.object(shape).partial() as unknown as z.ZodType<FilteringSchemaOutput>;
+    return z.object(shape).partial() as unknown as z.ZodType<TConfig extends FilteringConfig<infer TFields> ? FilteringSchemaOutput<TFields> : never>;
 }
 
 /**
- * Create a schema for a single field's filter options
+ * Create a schema for a single field's filter — { operator: 'op', value: valueSchema }
+ * Returns a discriminated union of all configured operators for the field.
  *
  * @param config Field filter configuration
- * @returns Zod schema for the field's filter
+ * @returns Zod schema for the field's filter (optional)
  */
 export function createFieldFilterSchema(config: FieldFilterConfig): z.ZodType {
-    const operators = config.operators ?? getDefaultOperators(config.type);
-    const operatorSchemas: Record<string, z.ZodType> = {};
+    const operators = getOperators(config);
+    const baseSchema = getBaseSchema(config);
 
-    for (const op of operators) {
-        operatorSchemas[op] = createOperatorValueSchema(op, config);
+    // Create discriminated union: { operator: 'op', value: valueSchema } for each operator
+    const variants = operators.map(op =>
+        z.object({
+            operator: z.literal(op),
+            value: createOperatorValueSchema(op, baseSchema),
+        })
+    );
+
+    if (variants.length === 0) {
+        return z.never().optional();
+    }
+    if (variants.length === 1 && variants[0]) {
+        return variants[0].optional();
     }
 
-    return z.object(operatorSchemas).partial().optional();
+    return z.union(variants as unknown as [z.ZodType, z.ZodType, ...z.ZodType[]]).optional();
 }
 
 /**
  * Get default operators for a field type
  */
-function getDefaultOperators(type: FieldFilterConfig["type"]): FilterOperator[] {
+function getDefaultOperators(type: ZodFieldFilterConfig["type"]): FilterOperator[] {
     switch (type) {
         case "string":
             return ["eq", "ne", "like", "ilike", "in", "notIn", "contains", "startsWith", "endsWith"];
@@ -181,9 +282,8 @@ function getDefaultOperators(type: FieldFilterConfig["type"]): FilterOperator[] 
  */
 function createOperatorValueSchema(
     operator: FilterOperator,
-    config: FieldFilterConfig
+    baseSchema: z.ZodType
 ): z.ZodType {
-    const baseSchema = getBaseTypeSchema(config);
 
     switch (operator) {
         case "in":
@@ -202,26 +302,43 @@ function createOperatorValueSchema(
 /**
  * Get the base Zod schema for a field type
  */
-function getBaseTypeSchema(config: FieldFilterConfig): z.ZodType {
-    switch (config.type) {
-        case "string":
-            return z.string();
-        case "number":
-            return z.number();
-        case "boolean":
-            return z.boolean();
-        case "date":
-            return z.coerce.date();
-        case "enum":
-            if (config.enumValues && config.enumValues.length > 0) {
-                return z.enum(config.enumValues as [string, ...string[]]);
-            }
-            return z.string();
-        case "array":
-            return z.array(z.unknown());
-        default:
-            return z.unknown();
+function isZodFieldFilterConfig(config: FieldFilterConfig): config is ZodFieldFilterConfig {
+    return typeof config === "object" && "type" in config;
+}
+
+function getOperators(config: FieldFilterConfig): FilterOperator[] {
+    if (isZodFieldFilterConfig(config)) {
+        return config.operators ?? getDefaultOperators(config.type);
     }
+
+    return [...config.operators];
+}
+
+function getBaseSchema(config: FieldFilterConfig): z.ZodType {
+    if (isZodFieldFilterConfig(config)) {
+        switch (config.type) {
+            case "string":
+                return z.string();
+            case "number":
+                return z.number();
+            case "boolean":
+                return z.boolean();
+            case "date":
+                return z.coerce.date();
+            case "enum":
+                if (config.enumValues && config.enumValues.length > 0) {
+                    return z.enum(config.enumValues as [string, ...string[]]);
+                }
+                return z.string();
+            case "array":
+                return z.array(z.unknown());
+            default:
+                return z.unknown();
+        }
+    }
+
+    const baseSchema = z.unknown();
+    return config.allowNull ? baseSchema.nullable() : baseSchema;
 }
 
 // ==================== Helper Factory Functions ====================

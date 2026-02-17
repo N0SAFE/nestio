@@ -96,7 +96,7 @@ pino-pretty                    packages/utils/logger/package.json:16:6
 @orpc/tanstack-query           packages/utils/orpc/package.json:24:6   
 Unused devDependencies (65)
 @repo-configs/prettier            apps/api/package.json:81:6                        
-@repo-configs/typescript          apps/api/package.json:82:6                        
+@repo/config-typescript          apps/api/package.json:82:6                        
 @types/bcrypt                     apps/api/package.json:84:6                        
 source-map-support                apps/api/package.json:89:6                        
 ts-loader                         apps/api/package.json:90:6                        
@@ -121,10 +121,10 @@ tailwind-variants                 apps/web/package.json:120:6
 wait-on                           apps/web/package.json:124:6                       
 wait-port                         apps/web/package.json:125:6                       
 @repo/env                         package.json:294:10                               
-@repo-configs/vitest              packages/bin/declarative-routing/package.json:36:6
+@repo/config-vitest              packages/bin/declarative-routing/package.json:36:6
 @types/diff                       packages/bin/declarative-routing/package.json:37:6
 @eslint/compat                    packages/configs/eslint/package.json:44:10        
-@repo-configs/vitest              packages/configs/eslint/package.json:46:10        
+@repo/config-vitest              packages/configs/eslint/package.json:46:10        
 @typescript-eslint/eslint-plugin  packages/configs/eslint/package.json:48:10        
 @vercel/style-guide               packages/configs/eslint/package.json:50:10        
 babel-plugin-macros               packages/configs/eslint/package.json:51:10        
@@ -134,15 +134,15 @@ eslint-config-prettier            packages/configs/eslint/package.json:56:10
 eslint-plugin-next                packages/configs/eslint/package.json:59:10        
 eslint-plugin-only-warn           packages/configs/eslint/package.json:60:10        
 eslint-plugin-react-refresh       packages/configs/eslint/package.json:63:10        
-@repo-configs/vitest              packages/configs/prettier/package.json:34:10      
+@repo/config-vitest              packages/configs/prettier/package.json:34:10      
 prettier-plugin-tailwindcss       packages/configs/prettier/package.json:36:10      
-@repo-configs/typescript          packages/configs/tailwind/package.json:14:6       
+@repo/config-typescript          packages/configs/tailwind/package.json:14:6       
 tailwind-variants                 packages/configs/tailwind/package.json:16:6       
 chokidar                          packages/configs/vitest/package.json:45:6         
 @testing-library/jest-dom         packages/configs/vitest/package.json:46:6         
 @testing-library/react            packages/configs/vitest/package.json:47:6         
 @testing-library/user-event       packages/configs/vitest/package.json:48:6         
-@repo-configs/typescript          packages/contracts/api/package.json:36:6          
+@repo/config-typescript          packages/contracts/api/package.json:36:6          
 @eslint/eslintrc                  packages/types/package.json:23:10                 
 @eslint/js                        packages/types/package.json:24:10                 
 @repo-configs/prettier            packages/types/package.json:26:10                 

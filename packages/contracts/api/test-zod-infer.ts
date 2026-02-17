@@ -1,5 +1,5 @@
-import { z } from "zod/v4";
-// import { oc, InferSchemaInput } from "@orpc/contract";
+import * as z from "zod";
+import { oc, InferSchemaInput, InferSchemaOutput } from "@orpc/contract";
 
 // ========================================
 // PART 1: Basic z.infer tests (should pass)

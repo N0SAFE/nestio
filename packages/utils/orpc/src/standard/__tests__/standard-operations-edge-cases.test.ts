@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod/v4';
-import { standard } from '../standard-operations';
+import { standard } from '../zod/standard-operations';
 
 describe('Standard Operations - Advanced Edge Cases', () => {
   const userSchema = z.object({
@@ -11,7 +11,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
 
   describe('Basic Operation Creation', () => {
     it('should handle complex schemas in standard operations', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
       
       expect(() => {
         operations.create().build();
@@ -31,7 +31,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     });
 
     it('should handle custom paths and methods', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       expect(() => {
         operations.create().build();
@@ -43,7 +43,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     });
 
     it('should handle streaming operations', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       expect(() => {
         operations.streamingRead().build();
@@ -57,7 +57,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
 
   describe('List Operations with Query Config', () => {
     it('should handle list operations without config', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       expect(() => {
         operations.list().build();
@@ -65,7 +65,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     });
 
     it('should handle list operations with pagination', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       expect(() => {
         operations.list({
@@ -79,7 +79,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     });
 
     it('should handle list operations with sorting', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       expect(() => {
         operations.list({
@@ -95,14 +95,14 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     it('should handle empty entity schema', () => {
       const emptySchema = z.object({});
       expect(() => {
-        standard(emptySchema, 'empty');
+        standard.zod(emptySchema, 'empty');
       }).not.toThrow();
     });
 
     it('should handle very long entity names', () => {
       const longName = 'a'.repeat(1000);
       expect(() => {
-        standard(userSchema, longName);
+        standard.zod(userSchema, longName);
       }).not.toThrow();
     });
 
@@ -111,7 +111,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
       
       specialNames.forEach(name => {
         expect(() => {
-          standard(userSchema, name);
+          standard.zod(userSchema, name);
         }).not.toThrow();
       });
     });
@@ -129,7 +129,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
       const largeSchema = z.object(largeSchemaFields);
 
       expect(() => {
-        const operations = standard(largeSchema, 'large');
+        const operations = standard.zod(largeSchema, 'large');
         operations.create().build();
         operations.read().build();
         operations.list().build();
@@ -137,7 +137,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     });
 
     it('should handle many operation definitions efficiently', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
       const start = performance.now();
 
       // Create many operations
@@ -153,7 +153,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
 
   describe('Builder State Consistency', () => {
     it('should maintain immutable state across transformations', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       const baseOperation1 = operations.create();
       const baseOperation2 = operations.create();
@@ -174,7 +174,7 @@ describe('Standard Operations - Advanced Edge Cases', () => {
     });
 
     it('should handle concurrent operation building', () => {
-      const operations = standard(userSchema, 'user');
+      const operations = standard.zod(userSchema, 'user');
 
       const concurrentBuilds = Array.from({ length: 10 }, () =>
         operations

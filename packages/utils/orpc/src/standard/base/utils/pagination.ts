@@ -84,9 +84,9 @@ export function createPaginationConfigSchema<
  */
 export type PaginationSchemaOutput<TConfig> = {
     limit: number;
-} & (TConfig extends { includeOffset: true } ? { offset: number } : object) &
-    (TConfig extends { includePage: true } ? { page: number } : object) &
-    (TConfig extends { includeCursor: true } ? { cursor?: string; cursorDirection?: "forward" | "backward" } : object);
+} & (TConfig extends Record<string, unknown> ? (TConfig["includeOffset"] extends true ? { offset: number } : object) : object) &
+    (TConfig extends Record<string, unknown> ? (TConfig["includePage"] extends true ? { page: number } : object) : object) &
+    (TConfig extends Record<string, unknown> ? (TConfig["includeCursor"] extends true ? { cursor?: string; cursorDirection?: "forward" | "backward" } : object) : object);
 
 /**
  * Create a pagination input schema from config

@@ -6,30 +6,33 @@
  * Uses Zod query utilities for list/search operations.
  */
 
-import { z } from "zod/v4";
-import type { HTTPPath } from "@orpc/contract";
+import * as z from "zod";
+import type { AnySchema, HTTPPath } from "@orpc/contract";
 import {
     StandardOperations as BaseStandardOperations,
     type EntityOperationOptions as BaseEntityOperationOptions,
-    type ListOperationOptions as BaseListOperationOptions,
     type ListPlainOptions as BaseListPlainOptions,
 } from "../base/standard-operations";
-import type { SchemaWithConfig } from "../base/types";
-import { hasConfig } from "../base/types";
+import type { ObjectSchema, SchemaWithConfig } from "../base/types";
+import { CONFIG_SYMBOL } from "../base/types";
 import {
     createPaginationConfigSchema,
     createSortingConfigSchema,
     createFilteringConfigSchema,
     createSearchConfigSchema,
     createQueryBuilder,
-    getConfig,
     type FieldFilterConfig,
     type ZodSchemaWithConfig,
     type PaginationConfig,
     type SortingConfig,
     type FilteringConfig,
-    type SearchConfig,
+    type QueryConfig,
+    type ComputeInputSchema,
+    type ComputeOutputSchema,
+    type QueryBuilder,
 } from "./utils";
+import { RouteBuilder } from "../../builder/route-builder";
+import { ListOperationBuilder } from "./list-builder";
 
 /**
  * Zod entity schema type - requires ZodObject for schema manipulation
@@ -45,6 +48,24 @@ type InferIdSchema<TEntity extends ZodEntitySchema, TIdField extends string> = T
         ? TEntity["shape"][TIdField]
         : z.ZodType
     : z.ZodType;
+
+type ZodConfigSchema<TConfig> = z.ZodType & {
+    [CONFIG_SYMBOL]: TConfig;
+};
+
+export type ZodListOperationOptions = {
+    pagination?: ZodConfigSchema<Partial<PaginationConfig>>;
+    sorting?: ZodConfigSchema<Partial<SortingConfig>>;
+    filtering?: ZodConfigSchema<FilteringConfig>;
+    search?: ZodConfigSchema<unknown>;
+};
+
+type QueryConfigFromOptions<TOptions extends ZodListOperationOptions> = {
+    pagination?: TOptions["pagination"] extends ZodConfigSchema<Partial<PaginationConfig>> ? TOptions["pagination"] : undefined;
+    sorting?: TOptions["sorting"] extends ZodConfigSchema<Partial<SortingConfig>> ? TOptions["sorting"] : undefined;
+    filtering?: TOptions["filtering"] extends ZodConfigSchema<FilteringConfig> ? TOptions["filtering"] : undefined;
+    search?: TOptions["search"] extends ZodConfigSchema<unknown> ? TOptions["search"] : undefined;
+};
 
 /**
  * Zod-specific entity operation options
@@ -102,103 +123,90 @@ export class ZodStandardOperations<
     }
 
     /**
-     * Helper to check if a value is a schema (not a plain config object)
-     */
-    private isSchema(value: unknown): value is SchemaWithConfig<unknown> {
-        return typeof value === "object" && value !== null && "~standard" in value;
-    }
-
-    /**
      * Helper to check if a schema has config
      */
-    private isConfigSchema(value: unknown): value is SchemaWithConfig<unknown> {
-        return this.isSchema(value) && hasConfig(value);
+    private isConfigSchema(value: unknown): value is ZodConfigSchema<unknown> {
+        return typeof value === "object" && value !== null && CONFIG_SYMBOL in value;
+    }
+
+    private isQueryConfig(options: BaseListPlainOptions | ZodListOperationOptions): options is ZodListOperationOptions {
+        return (
+            this.isConfigSchema(options.pagination) ||
+            this.isConfigSchema(options.sorting) ||
+            this.isConfigSchema(options.filtering) ||
+            this.isConfigSchema(options.search)
+        );
+    }
+
+    private isPlainListOptions(options: BaseListPlainOptions | ZodListOperationOptions): options is BaseListPlainOptions {
+        return !this.isQueryConfig(options);
     }
 
     // ==================== Helper: Build Zod QueryBuilder ====================
 
     /**
      * Build a Zod QueryBuilder from list options
+     * Returns a properly typed QueryBuilder that preserves the config structure
      */
-    private buildZodQueryBuilder(options?: BaseListOperationOptions | BaseListPlainOptions) {
+    private buildZodQueryBuilder<TConfig extends ZodListOperationOptions>(options: TConfig): QueryBuilder<QueryConfigFromOptions<TConfig>>;
+    private buildZodQueryBuilder(options?: BaseListPlainOptions): QueryBuilder<QueryConfig>;
+    private buildZodQueryBuilder(options?: ZodListOperationOptions | BaseListPlainOptions): QueryBuilder<QueryConfig> {
         if (!options) {
-            return createQueryBuilder().withPagination(createPaginationConfigSchema({ defaultLimit: 10, maxLimit: 100 }));
+            return createQueryBuilder({
+                pagination: createPaginationConfigSchema({ defaultLimit: 10, maxLimit: 100 }),
+            });
         }
 
+        if (this.isQueryConfig(options)) {
+            const config: QueryConfig = {
+                pagination: options.pagination,
+                sorting: options.sorting,
+                filtering: options.filtering,
+                search: options.search,
+            };
+            return createQueryBuilder(config);
+        }
+
+        if (!this.isPlainListOptions(options)) {
+            return createQueryBuilder({
+                pagination: createPaginationConfigSchema({ defaultLimit: 10, maxLimit: 100 }),
+            });
+        }
+
+        const plainOptions = options;
+
         const paginationConfig = (() => {
-            if (options.pagination) {
-                if (this.isConfigSchema(options.pagination)) {
-                    // Type assertion: in Zod context, config schemas are always ZodSchemaWithConfig
-                    const schema = options.pagination as unknown;
-                    return schema as ZodSchemaWithConfig<Partial<PaginationConfig>>;
-                }
-                const plain = options.pagination as { defaultLimit?: number; maxLimit?: number };
-                return createPaginationConfigSchema(plain);
+            if (plainOptions.pagination) {
+                return createPaginationConfigSchema(plainOptions.pagination);
             }
             return createPaginationConfigSchema({ defaultLimit: 10, maxLimit: 100 });
         })();
 
-        let builder = createQueryBuilder().withPagination(paginationConfig);
+        let builder = createQueryBuilder({ pagination: paginationConfig });
 
-        if (options.sorting) {
-            if (this.isConfigSchema(options.sorting)) {
-                // Type assertion: in Zod context, config schemas are always ZodSchemaWithConfig
-                const schema = options.sorting as unknown;
-                const sortingConfig = schema as ZodSchemaWithConfig<Partial<SortingConfig>>;
-                builder = builder.withSorting(sortingConfig);
-            } else {
-                const plain = options.sorting as {
-                    fields: readonly string[];
-                    defaultField?: string;
-                    defaultDirection?: "asc" | "desc";
-                };
-                builder = builder.withSorting(
-                    createSortingConfigSchema(plain.fields, {
-                        defaultField: plain.defaultField,
-                        defaultDirection: plain.defaultDirection,
-                    }),
-                );
-            }
+        if (plainOptions.sorting) {
+            builder = builder.withSorting(
+                createSortingConfigSchema(plainOptions.sorting.fields, {
+                    defaultField: plainOptions.sorting.defaultField,
+                    defaultDirection: plainOptions.sorting.defaultDirection,
+                }),
+            );
         }
 
-        if (options.filtering) {
-            if (this.isConfigSchema(options.filtering)) {
-                // Type assertion: in Zod context, config schemas are always ZodSchemaWithConfig
-                const schema = options.filtering as unknown;
-                const filteringConfig = schema as ZodSchemaWithConfig<Partial<FilteringConfig>>;
-                builder = builder.withFiltering(filteringConfig);
-            } else {
-                const plain = options.filtering as {
-                    fields: Record<string, FieldFilterConfig>;
-                    allowLogicalOperators?: boolean;
-                };
-                builder = builder.withFiltering(
-                    createFilteringConfigSchema(plain.fields, {
-                        allowLogicalOperators: plain.allowLogicalOperators,
-                    }),
-                );
-            }
+        if (plainOptions.filtering) {
+            builder = builder.withFiltering(
+                createFilteringConfigSchema(plainOptions.filtering.fields, {
+                    allowLogicalOperators: plainOptions.filtering.allowLogicalOperators,
+                }),
+            );
         }
 
-        if (options.search) {
-            if (this.isConfigSchema(options.search)) {
-                // Type assertion: in Zod context, config schemas are always ZodSchemaWithConfig
-                const schema = options.search as unknown;
-                const searchConfig = schema as ZodSchemaWithConfig<Partial<SearchConfig>>;
-                builder = builder.withSearch(searchConfig);
-            } else {
-                const plain = options.search as {
-                    fields?: readonly string[];
-                    minQueryLength?: number;
-                };
-                if (plain.fields && plain.fields.length > 0) {
-                    builder = builder.withSearch(
-                        createSearchConfigSchema(plain.fields, {
-                            minQueryLength: plain.minQueryLength,
-                        }),
-                    );
-                }
-            }
+        if (plainOptions.search?.fields && plainOptions.search.fields.length > 0) {
+            builder = builder.withSearch(
+                createSearchConfigSchema(plainOptions.search.fields, {
+                    minQueryLength: plainOptions.search.minQueryLength,
+                }),
+            );
         }
 
         return builder;
@@ -206,7 +214,7 @@ export class ZodStandardOperations<
 
     // ==================== CRUD Operations ====================
 
-        read<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: { idSchema?: TIdSch; idFieldName?: TIdFieldName }) {
+    read<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: { idSchema?: TIdSch; idFieldName?: TIdFieldName }) {
         const idFieldName = (options?.idFieldName ?? this.idField) as TIdFieldName;
         const idSchema = (options?.idSchema ?? this.idSchema) as TIdSch;
 
@@ -214,10 +222,12 @@ export class ZodStandardOperations<
             method: "GET",
             summary: `Get ${this.entityName} by ${idFieldName}`,
             description: `Retrieve a specific ${this.entityName} by their ${idFieldName}`,
-        }).input((b) => {
-            const e = b.params((p) => p`/{${p(idFieldName, idSchema)}}`);
-            return e;
-        }).output(this.entitySchema)
+        })
+            .input((b) => {
+                const e = b.params((p) => p`/${p(idFieldName, idSchema)}`);
+                return e;
+            })
+            .output(this.entitySchema);
     }
 
     create(options?: { bodySchema?: z.ZodType; omitFields?: readonly (keyof z.infer<TEntity>)[] }) {
@@ -241,9 +251,9 @@ export class ZodStandardOperations<
             summary: `Create a new ${this.entityName}`,
             description: `Create a new ${this.entityName} in the system`,
         })
-            .path("/" as HTTPPath)
+            .path("/")
             .input((b) => b.body(bodySchema as TEntity))
-            .output((b) => b.status(201).body(this.entitySchema));
+            .output(b => b.status(201).body(this.entitySchema));
     }
 
     update<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: {
@@ -274,7 +284,7 @@ export class ZodStandardOperations<
             summary: `Update an existing ${this.entityName}`,
             description: `Update an existing ${this.entityName} in the system`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}`).body(bodySchema))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}`).body(bodySchema))
             .output(this.entitySchema);
     }
 
@@ -309,7 +319,7 @@ export class ZodStandardOperations<
             summary: `Partially update ${this.entityName}`,
             description: `Update specific fields of ${this.entityName}`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}`).body(bodySchema))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}`).body(bodySchema))
             .output(this.entitySchema);
     }
 
@@ -322,7 +332,7 @@ export class ZodStandardOperations<
             summary: `Delete ${this.entityName}`,
             description: `Delete a ${this.entityName} by ${idFieldName}`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}`))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}`))
             .output(
                 z.object({
                     success: z.boolean(),
@@ -333,57 +343,240 @@ export class ZodStandardOperations<
 
     // ==================== List Operations ====================
 
-    list<
-        TPagination extends ZodSchemaWithConfig<Partial<PaginationConfig>> | undefined = undefined,
-        TSorting extends ZodSchemaWithConfig<Partial<SortingConfig>> | undefined = undefined,
-        TFiltering extends ZodSchemaWithConfig<Partial<FilteringConfig>> | undefined = undefined,
-        TSearch extends ZodSchemaWithConfig<Partial<SearchConfig>> | undefined = undefined
-    >(options?: {
-        pagination?: TPagination;
-        sorting?: TSorting;
-        filtering?: TFiltering;
-        search?: TSearch;
-    } | BaseListPlainOptions) {
-        const queryBuilder = this.buildZodQueryBuilder(options);
-        const inputSchema = queryBuilder.buildInputSchema();
-
-        // Build output schema - get pagination config for meta schema
-        const config = queryBuilder.getConfig();
-        const paginationConfig = getConfig<Partial<PaginationConfig>>(
-            config.pagination as unknown as ZodSchemaWithConfig<Partial<PaginationConfig>>
+    /**
+     * Create a fluent list operation builder
+     * 
+     * Returns a builder that allows chaining configuration methods for a cleaner API.
+     * 
+     * @returns ListOperationBuilder for fluent configuration
+     * 
+     * @example
+     * ```typescript
+     * const userListContract = userOps
+     *   .listBuilder()
+     *   .withPagination({ defaultLimit: 20, maxLimit: 100 })
+     *   .withSorting(['name', 'email', 'createdAt'], { 
+     *     defaultField: 'createdAt', 
+     *     defaultDirection: 'desc' 
+     *   })
+     *   .withFiltering({
+     *     name: { schema: z.string(), operators: ['eq', 'like'] },
+     *     email: z.string().email()
+     *   })
+     *   .withSearch(['name', 'email'])
+     *   .build();
+     * 
+     * // Export schemas for reuse:
+     * export const userListSchemas = userOps
+     *   .listBuilder()
+     *   .withPagination({ defaultLimit: 20 })
+     *   .withSorting(['name', 'email'])
+     *   .getSchemas();
+     * ```
+     */
+    listBuilder(): ListOperationBuilder<TEntity> {
+        return new ListOperationBuilder(
+            this as unknown as ZodStandardOperations<TEntity, string, z.ZodType>,
+            this.entitySchema,
         );
-        
-        if (!paginationConfig) {
-            throw new Error("Invalid pagination config");
-        }
+    }
 
-        // Build output schema inline without Record typing to preserve exact types
-        const outputSchema = z.object({
-            data: z.array(this.entitySchema),
-            meta: z.object({
-                total: z.number().int().min(0),
-                limit: z.number().int().min(1),
-                hasMore: z.boolean(),
-                ...(paginationConfig.includeOffset ? { offset: z.number().int().min(0) } : {}),
-                ...(paginationConfig.includePage ? {
-                    page: z.number().int().min(1),
-                    totalPages: z.number().int().min(0)
-                } : {}),
-                ...(paginationConfig.includeCursor ? {
-                    nextCursor: z.string().nullable().optional(),
-                    prevCursor: z.string().nullable().optional()
-                } : {})
-            })
-        });
-        
+    /**
+     * Build a list route from a pre-configured QueryBuilder.
+     * 
+     * Unlike list(), this method takes a QueryBuilder<TConfig> directly,
+     * preserving the exact TConfig type parameter through the chain.
+     * Used by ListOperationBuilder to create properly typed contracts.
+     */
+    buildListRoute<TConfig extends QueryConfig>(queryBuilder: QueryBuilder<TConfig>) {
+        const inputSchema = queryBuilder.buildInputSchema();
+        const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
+
         return this.createBuilder({
             method: "GET",
             summary: `List ${this.entityName}s`,
             description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
         })
-            .path("/" as HTTPPath)
+            .path("/")
             .input((b) => b.query(inputSchema))
             .output(outputSchema);
+    }
+
+    /**
+     * List operation with config-based query builder (preserves exact types)
+     */
+    list<TConfig extends ZodListOperationOptions>(options: TConfig): RouteBuilder<
+        ObjectSchema<{
+            query: z.ZodType<ComputeInputSchema<QueryConfigFromOptions<TConfig>>>;
+            params: AnySchema;
+            body: AnySchema;
+            headers: AnySchema;
+        }>,
+        z.ZodType<ComputeOutputSchema<QueryConfigFromOptions<TConfig>, z.infer<TEntity>>>,
+        "GET",
+        TEntity
+    >;
+
+    /**
+     * List operation with no options (uses default pagination)
+     */
+    list(): RouteBuilder<
+        ObjectSchema<{
+            query: z.ZodObject<{
+                limit: z.ZodOptional<z.ZodNumber>;
+                offset: z.ZodOptional<z.ZodNumber>;
+            }>;
+            params: AnySchema;
+            body: AnySchema;
+            headers: AnySchema;
+        }>,
+        z.ZodObject<{
+            data: z.ZodArray<TEntity>;
+            meta: z.ZodObject<{
+                total: z.ZodNumber;
+                limit: z.ZodNumber;
+                offset: z.ZodNumber;
+                hasMore: z.ZodBoolean;
+            }>;
+        }>,
+        "GET",
+        TEntity
+    >;
+
+    /**
+     * List operation with plain options (loosely typed)
+     */
+    list(options: BaseListPlainOptions): RouteBuilder<
+        ObjectSchema<{
+            query: AnySchema;
+            params: AnySchema;
+            body: AnySchema;
+            headers: AnySchema;
+        }>,
+        z.ZodType,
+        "GET",
+        TEntity
+    >;
+
+    list(options?: ZodListOperationOptions | BaseListPlainOptions): RouteBuilder<
+        ObjectSchema<{
+            query: AnySchema;
+            params: AnySchema;
+            body: AnySchema;
+            headers: AnySchema;
+        }>,
+        z.ZodType,
+        "GET",
+        TEntity
+    > {
+        if (!options) {
+            const queryBuilder = this.buildZodQueryBuilder();
+            const inputSchema = queryBuilder.buildInputSchema();
+            const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
+
+            return this.createBuilder({
+                method: "GET",
+                summary: `List ${this.entityName}s`,
+                description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
+            })
+                .path("/")
+                .input((b) => b.query(inputSchema))
+                .output(outputSchema) as unknown as RouteBuilder<
+                    ObjectSchema<{
+                        query: z.ZodObject<{
+                            limit: z.ZodOptional<z.ZodNumber>;
+                            offset: z.ZodOptional<z.ZodNumber>;
+                        }>;
+                        params: AnySchema;
+                        body: AnySchema;
+                        headers: AnySchema;
+                    }>,
+                    z.ZodObject<{
+                        data: z.ZodArray<TEntity>;
+                        meta: z.ZodObject<{
+                            total: z.ZodNumber;
+                            limit: z.ZodNumber;
+                            offset: z.ZodNumber;
+                            hasMore: z.ZodBoolean;
+                        }>;
+                    }>,
+                    "GET",
+                    TEntity
+                >;
+        }
+
+        if (this.isQueryConfig(options)) {
+            const queryBuilder = this.buildZodQueryBuilder(options);
+            const inputSchema = queryBuilder.buildInputSchema();
+            const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
+
+            return this.createBuilder({
+                method: "GET",
+                summary: `List ${this.entityName}s`,
+                description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
+            })
+                .path("/")
+                .input((b) => b.query(inputSchema))
+                .output(outputSchema) as unknown as RouteBuilder<
+                    ObjectSchema<{
+                        query: AnySchema;
+                        params: AnySchema;
+                        body: AnySchema;
+                        headers: AnySchema;
+                    }>,
+                    z.ZodType,
+                    "GET",
+                    TEntity
+                >;
+        }
+
+        if (this.isPlainListOptions(options)) {
+            const queryBuilder = this.buildZodQueryBuilder(options);
+            const inputSchema = queryBuilder.buildInputSchema();
+            const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
+
+            return this.createBuilder({
+                method: "GET",
+                summary: `List ${this.entityName}s`,
+                description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
+            })
+                .path("/")
+                .input((b) => b.query(inputSchema))
+                .output(outputSchema) as unknown as RouteBuilder<
+                    ObjectSchema<{
+                        query: AnySchema;
+                        params: AnySchema;
+                        body: AnySchema;
+                        headers: AnySchema;
+                    }>,
+                    z.ZodType,
+                    "GET",
+                    TEntity
+                >;
+        }
+
+        const queryBuilder = this.buildZodQueryBuilder();
+        const inputSchema = queryBuilder.buildInputSchema();
+        const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
+
+        return this.createBuilder({
+            method: "GET",
+            summary: `List ${this.entityName}s`,
+            description: `Retrieve a paginated list of ${this.entityName}s with optional filtering and sorting`,
+        })
+            .path("/")
+            .input((b) => b.query(inputSchema))
+            .output(outputSchema) as unknown as RouteBuilder<
+                ObjectSchema<{
+                    query: AnySchema;
+                    params: AnySchema;
+                    body: AnySchema;
+                    headers: AnySchema;
+                }>,
+                z.ZodType,
+                "GET",
+                TEntity
+            >;
     }
 
     // ==================== Batch Operations ====================
@@ -415,7 +608,7 @@ export class ZodStandardOperations<
             summary: `Batch create ${this.entityName}s`,
             description: `Create multiple ${this.entityName}s in a single request`,
         })
-            .path("/batch" as HTTPPath)
+            .path("/batch")
             .input((b) =>
                 b.body(
                     z.object({
@@ -445,7 +638,7 @@ export class ZodStandardOperations<
             summary: `Batch delete ${this.entityName}s`,
             description: `Delete multiple ${this.entityName}s by IDs`,
         })
-            .path("/batch" as HTTPPath)
+            .path("/batch")
             .input((b) =>
                 b.body(
                     z.object({
@@ -470,7 +663,7 @@ export class ZodStandardOperations<
             summary: `Batch read ${this.entityName}s`,
             description: `Get multiple ${this.entityName}s by their IDs in a single request`,
         })
-            .path("/batch/read" as HTTPPath)
+            .path("/batch/read")
             .input((b) =>
                 b.body(
                     z.object({
@@ -494,7 +687,7 @@ export class ZodStandardOperations<
             summary: `Batch update ${this.entityName}s`,
             description: `Update multiple ${this.entityName}s in a single request`,
         })
-            .path("/batch" as HTTPPath)
+            .path("/batch")
             .input((b) =>
                 b.body(
                     z.object({
@@ -553,15 +746,17 @@ export class ZodStandardOperations<
     // ==================== Utility Operations ====================
 
     count(options?: { filtering?: SchemaWithConfig<unknown> }) {
-        const inputSchema = options?.filtering ? z.object({ filter: z.any().optional() }) : z.object({});
-
-        return this.createBuilder({
+        const builder = this.createBuilder({
             method: "GET",
             summary: `Count ${this.entityName}s`,
             description: `Get the total count of ${this.entityName}s`,
         })
-            .path("/count" as HTTPPath)
-            .input(inputSchema)
+            .path("/count");
+
+        void options;
+
+        return builder
+            .input((b) => b.query(z.object({ filter: z.any().optional() })))
             .output(
                 z.object({
                     count: z.number().int().min(0),
@@ -569,7 +764,14 @@ export class ZodStandardOperations<
             );
     }
 
-    search(options?: { searchFields?: readonly string[]; pagination?: SchemaWithConfig<unknown> | { defaultLimit?: number; maxLimit?: number } }) {
+    search<
+        TOptions extends
+            | {
+                  searchFields?: readonly string[];
+                  pagination?: z.ZodType | SchemaWithConfig<unknown> | ZodSchemaWithConfig<Partial<PaginationConfig>> | { defaultLimit?: number; maxLimit?: number };
+              }
+            | undefined = undefined
+    >(options?: TOptions) {
         let queryBuilder = createQueryBuilder();
 
         if (options?.searchFields && options.searchFields.length > 0) {
@@ -602,21 +804,21 @@ export class ZodStandardOperations<
             summary: `Search ${this.entityName}s`,
             description: `Full-text search for ${this.entityName}s with pagination`,
         })
-            .path("/search" as HTTPPath)
-            .input(inputSchema)
+            .path("/search")
+            .input((b) => b.query(inputSchema))
             .output(outputSchema);
     }
 
-    check(fieldName: string, fieldSchema?: z.ZodType) {
-        const schema = fieldSchema ?? (this.entitySchema.shape[fieldName] as z.ZodType | undefined) ?? z.any();
+    check<TFieldName extends string, TFieldSchema extends z.ZodType = z.ZodString>(fieldName: TFieldName, fieldSchema?: TFieldSchema) {
+        const schema = (fieldSchema ?? this.entitySchema.shape[fieldName] ?? z.string()) as TFieldSchema;
 
         return this.createBuilder({
             method: "GET",
             summary: `Check ${this.entityName} ${fieldName}`,
             description: `Check if a ${this.entityName} exists with the given ${fieldName}`,
         })
-            .path(`/check/${fieldName}` as HTTPPath)
-            .input(z.object({ [fieldName]: schema }))
+            .path(`/check/${fieldName}`)
+            .input(z.object({ [fieldName]: schema }) as z.ZodObject<Record<TFieldName, TFieldSchema>>)
             .output(
                 z.object({
                     exists: z.boolean(),
@@ -633,7 +835,7 @@ export class ZodStandardOperations<
             summary: `Check if ${this.entityName} exists`,
             description: `Check if a ${this.entityName} exists by ${idFieldName}`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}/exists`))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}/exists`))
             .output(
                 z.object({
                     exists: z.boolean(),
@@ -641,7 +843,7 @@ export class ZodStandardOperations<
             );
     }
 
-    upsert(options?: { uniqueField?: string; path?: string }) {
+    upsert(options?: { uniqueField?: string; path?: HTTPPath }) {
         const uniqueField = options?.uniqueField ?? this.idField;
         const upsertPath = options?.path ?? "/upsert";
 
@@ -650,7 +852,7 @@ export class ZodStandardOperations<
             summary: `Upsert ${this.entityName}`,
             description: `Create or update ${this.entityName} by ${uniqueField}`,
         })
-            .path(upsertPath as HTTPPath)
+            .path(upsertPath)
             .input((b) => b.body(this.entitySchema))
             .output(
                 z.object({
@@ -685,7 +887,7 @@ export class ZodStandardOperations<
             summary: `Validate ${this.entityName}`,
             description: `Validate ${this.entityName} data without persisting`,
         })
-            .path("/validate" as HTTPPath)
+            .path("/validate")
             .input((b) => b.body(bodySchema))
             .output(
                 z.object({
@@ -714,7 +916,7 @@ export class ZodStandardOperations<
             summary: `Soft delete ${this.entityName}`,
             description: `Mark ${this.entityName} as deleted without removing from database`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}${pathSuffix}`))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}${pathSuffix}`))
             .output(
                 z.object({
                     success: z.boolean(),
@@ -733,7 +935,7 @@ export class ZodStandardOperations<
             summary: `Batch soft delete ${this.entityName}s`,
             description: `Mark multiple ${this.entityName}s as deleted`,
         })
-            .path(`/batch${pathSuffix}` as HTTPPath)
+            .path(`/batch${pathSuffix}`)
             .input((b) =>
                 b.body(
                     z.object({
@@ -750,10 +952,6 @@ export class ZodStandardOperations<
     }
 
     archive<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: { idSchema?: TIdSch; idFieldName?: TIdFieldName }) {
-        if (!this.hasSoftDelete) {
-            throw new Error("Soft delete is not enabled for this entity");
-        }
-
         const idFieldName = (options?.idFieldName ?? this.idField) as TIdFieldName;
         const idSchema = (options?.idSchema ?? this.idSchema) as TIdSch;
 
@@ -762,7 +960,7 @@ export class ZodStandardOperations<
             summary: `Archive ${this.entityName}`,
             description: `Soft delete (archive) a ${this.entityName}`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}/archive`))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}/archive`))
             .output(
                 z.object({
                     success: z.boolean(),
@@ -772,10 +970,6 @@ export class ZodStandardOperations<
     }
 
     restore<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: { idSchema?: TIdSch; idFieldName?: TIdFieldName }) {
-        if (!this.hasSoftDelete) {
-            throw new Error("Soft delete is not enabled for this entity");
-        }
-
         const idFieldName = (options?.idFieldName ?? this.idField) as TIdFieldName;
         const idSchema = (options?.idSchema ?? this.idSchema) as TIdSch;
 
@@ -784,7 +978,7 @@ export class ZodStandardOperations<
             summary: `Restore ${this.entityName}`,
             description: `Restore a soft-deleted ${this.entityName}`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}/restore`))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}/restore`))
             .output(this.entitySchema);
     }
 
@@ -801,7 +995,7 @@ export class ZodStandardOperations<
         })
             .input((b) =>
                 b
-                    .params((p) => p`/{${p(idFieldName, idSchema)}}/clone`)
+                    .params((p) => p`/${p(idFieldName, idSchema)}/clone`)
                     .body(
                         z.object({
                             overrides: z.record(z.string(), z.any()).optional(),
@@ -822,7 +1016,7 @@ export class ZodStandardOperations<
         })
             .input((b) =>
                 b
-                    .params((p) => p`/{${p(idFieldName, idSchema)}}/history`)
+                    .params((p) => p`/${p(idFieldName, idSchema)}/history`)
                     .query(
                         z.object({
                             limit: z.coerce.number().min(1).max(100).optional(),
@@ -860,7 +1054,7 @@ export class ZodStandardOperations<
             summary: `Get distinct ${fieldName} values`,
             description: `Get all unique values for ${fieldName} field`,
         })
-            .path(`/distinct/${fieldName}` as HTTPPath)
+            .path(`/distinct/${fieldName}`)
             .input(
                 z.object({
                     limit: z.coerce.number().min(1).max(1000).optional(),
@@ -874,7 +1068,7 @@ export class ZodStandardOperations<
             );
     }
 
-    aggregate(options?: { functions?: Record<string, { op: "sum" | "avg" | "min" | "max" | "count"; field: string }>; groupBy?: readonly string[]; path?: string }) {
+    aggregate(options?: { functions?: Record<string, { op: "sum" | "avg" | "min" | "max" | "count"; field: string }>; groupBy?: readonly string[]; path?: HTTPPath }) {
         const aggregatePath = options?.path ?? "/aggregate";
 
         const inputSchema = z.object({
@@ -893,12 +1087,12 @@ export class ZodStandardOperations<
             summary: `Aggregate ${this.entityName}s`,
             description: `Perform aggregation operations (sum, avg, min, max, count) on ${this.entityName}s with optional grouping`,
         })
-            .path(aggregatePath as HTTPPath)
+            .path(aggregatePath)
             .input((b) => b.body(inputSchema))
             .output(outputSchema);
     }
 
-    export(options?: { formats?: readonly string[]; path?: string }) {
+    export(options?: { formats?: readonly string[]; path?: HTTPPath }) {
         const formats = options?.formats ?? ["csv", "json", "xml"];
         const exportPath = options?.path ?? "/export";
 
@@ -907,7 +1101,7 @@ export class ZodStandardOperations<
             summary: `Export ${this.entityName}s`,
             description: `Export ${this.entityName}s in various formats`,
         })
-            .path(exportPath as HTTPPath)
+            .path(exportPath)
             .input((b) =>
                 b.body(
                     z.object({
@@ -927,7 +1121,7 @@ export class ZodStandardOperations<
             );
     }
 
-    import(options?: { formats?: readonly string[]; maxRecords?: number; path?: string }) {
+    import(options?: { formats?: readonly string[]; maxRecords?: number; path?: HTTPPath }) {
         const formats = options?.formats ?? ["csv", "json", "xml"];
         const maxRecords = options?.maxRecords ?? 10000;
         const importPath = options?.path ?? "/import";
@@ -937,7 +1131,7 @@ export class ZodStandardOperations<
             summary: `Import ${this.entityName}s`,
             description: `Bulk import ${this.entityName}s from file. Max ${String(maxRecords)} records.`,
         })
-            .path(importPath as HTTPPath)
+            .path(importPath)
             .input((b) =>
                 b.body(
                     z.object({
@@ -972,7 +1166,7 @@ export class ZodStandardOperations<
             );
     }
 
-    healthCheck(options?: { includeDependencies?: boolean; path?: string }) {
+    healthCheck(options?: { includeDependencies?: boolean; path?: HTTPPath }) {
         const healthPath = options?.path ?? "/health";
 
         return this.createBuilder({
@@ -980,7 +1174,7 @@ export class ZodStandardOperations<
             summary: "Health check",
             description: `Health check endpoint for ${this.entityName} service`,
         })
-            .path(healthPath as HTTPPath)
+            .path(healthPath)
             .input(z.object({}))
             .output(
                 z.object({
@@ -1002,7 +1196,7 @@ export class ZodStandardOperations<
             );
     }
 
-    metrics(options?: { format?: "json" | "prometheus"; path?: string }) {
+    metrics(options?: { format?: "json" | "prometheus"; path?: HTTPPath }) {
         const metricsPath = options?.path ?? "/metrics";
         const format = options?.format ?? "json";
 
@@ -1031,7 +1225,7 @@ export class ZodStandardOperations<
             summary: "Service metrics",
             description: `Expose service metrics for ${this.entityName} operations`,
         })
-            .path(metricsPath as HTTPPath)
+            .path(metricsPath)
             .input(z.object({}))
             .output(outputSchema);
     }
@@ -1042,63 +1236,66 @@ export class ZodStandardOperations<
         const idFieldName = (options?.idFieldName ?? this.idField) as TIdFieldName;
         const idSchema = (options?.idSchema ?? this.idSchema) as TIdSch;
 
-        return this.createBuilder({
+        const builder = this.createBuilder({
             method: "GET",
             summary: `Streaming ${this.entityName} by ID`,
             description: `Real-time streaming of a specific ${this.entityName} via EventIterator`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}/streaming`))
-            .output((b) => b.body.streamed(this.entitySchema));
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}/streaming`));
+        
+        // Type assertion needed: streamed outputs don't perfectly infer through output() overloads
+        return builder.output(b => b.body.streamed(this.entitySchema));
     }
 
-    streamingList<TOptions extends BaseListOperationOptions | (BaseListPlainOptions & { path?: string }) | undefined = undefined>(
-        options?: TOptions
-    ) {
-        const queryBuilder = this.buildZodQueryBuilder(options);
-        const inputSchema = queryBuilder.buildInputSchema();
+    streamingList(options?: (ZodListOperationOptions & { path?: HTTPPath }) | (BaseListPlainOptions & { path?: HTTPPath })) {
+        const listOptions = options && "path" in options
+            ? (() => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { path: _path, ...rest } = options;
+                return Object.keys(rest).length > 0 ? rest : undefined;
+            })()
+            : options;
 
-        // Build output schema - get pagination config for meta schema
-        const config = queryBuilder.getConfig();
-        const paginationConfig = getConfig<Partial<PaginationConfig>>(
-            config.pagination as unknown as ZodSchemaWithConfig<Partial<PaginationConfig>>
-        );
-        
-        if (!paginationConfig) {
-            throw new Error("Invalid pagination config");
+        const streamPath = options?.path ?? "/streaming";
+
+        const buildResponse = <TConfig extends QueryConfig>(queryBuilder: QueryBuilder<TConfig>) => {
+            const inputSchema = queryBuilder.buildInputSchema();
+            const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
+
+            const builder = this.createBuilder({
+                method: "GET",
+                summary: `Streaming ${this.entityName}s list`,
+                description: `Real-time streaming list of ${this.entityName}s via EventIterator`,
+            })
+                .path(streamPath)
+                .input((b) => b.query(inputSchema));
+            
+            return builder.output((b) => b.body.streamed(outputSchema));
+        };
+
+        if (!listOptions) {
+            return buildResponse(this.buildZodQueryBuilder());
         }
 
-        // Build output schema inline without Record typing to preserve exact types
-        const outputSchema = z.object({
-            data: z.array(this.entitySchema),
-            meta: z.object({
-                total: z.number().int().min(0),
-                limit: z.number().int().min(1),
-                hasMore: z.boolean(),
-                ...(paginationConfig.includeOffset ? { offset: z.number().int().min(0) } : {}),
-                ...(paginationConfig.includePage ? {
-                    page: z.number().int().min(1),
-                    totalPages: z.number().int().min(0)
-                } : {}),
-                ...(paginationConfig.includeCursor ? {
-                    nextCursor: z.string().nullable().optional(),
-                    prevCursor: z.string().nullable().optional()
-                } : {})
-            })
-        });
-        
-        const streamPath = (options as { path?: string } | undefined)?.path ?? "/streaming";
+        if (this.isQueryConfig(listOptions)) {
+            return buildResponse(this.buildZodQueryBuilder(listOptions));
+        }
 
-        return this.createBuilder({
-            method: "GET",
-            summary: `Streaming ${this.entityName}s list`,
-            description: `Real-time streaming list of ${this.entityName}s via EventIterator`,
-        })
-            .path(streamPath as HTTPPath)
-            .input((b) => b.query(inputSchema))
-            .output((b) => b.body.streamed(outputSchema));
+        if (this.isPlainListOptions(listOptions)) {
+            return buildResponse(this.buildZodQueryBuilder(listOptions));
+        }
+
+        return buildResponse(this.buildZodQueryBuilder());
     }
 
-    streamingSearch(options?: { searchFields?: readonly string[]; pagination?: SchemaWithConfig<unknown> | { defaultLimit?: number; maxLimit?: number } }) {
+    streamingSearch<
+        TOptions extends
+            | {
+                  searchFields?: readonly string[];
+                  pagination?: z.ZodType | SchemaWithConfig<unknown> | ZodSchemaWithConfig<Partial<PaginationConfig>> | { defaultLimit?: number; maxLimit?: number };
+              }
+            | undefined = undefined
+    >(options?: TOptions) {
         let queryBuilder = createQueryBuilder();
 
         if (options?.searchFields && options.searchFields.length > 0) {
@@ -1126,19 +1323,20 @@ export class ZodStandardOperations<
         const inputSchema = queryBuilder.buildInputSchema();
         const outputSchema = queryBuilder.buildOutputSchema(this.entitySchema);
 
-        return this.createBuilder({
+        const builder = this.createBuilder({
             method: "GET",
             summary: `Streaming search ${this.entityName}s`,
             description: `Real-time streaming search for ${this.entityName}s`,
         })
-            .path("/search/streaming" as HTTPPath)
-            .input(inputSchema)
-            .output((b) => b.body.streamed(outputSchema));
+            .path("/search/streaming")
+            .input((b) => b.query(inputSchema));
+        
+        return builder.output(b => b.body.streamed(outputSchema));
     }
 
-    streamedInput<TChunkSchema extends z.ZodType = TEntity>(options?: { chunkSchema?: TChunkSchema; path?: string; outputSchema?: z.ZodType }) {
+    streamedInput<TChunkSchema extends z.ZodType = TEntity>(options?: { chunkSchema?: TChunkSchema; path?: HTTPPath; outputSchema?: z.ZodType }) {
         const chunkSchema = (options?.chunkSchema ?? this.entitySchema) as TChunkSchema;
-        const streamPath = (options?.path ?? "/stream-upload") as HTTPPath;
+        const streamPath = (options?.path ?? "/stream-upload");
 
         const defaultOutputSchema = z.object({
             success: z.boolean(),
@@ -1158,26 +1356,28 @@ export class ZodStandardOperations<
             .output(outputSchema);
     }
 
-    websocket<TInputChunk extends z.ZodType = TEntity, TOutputChunk extends z.ZodType = TEntity>(options?: { inputChunkSchema?: TInputChunk; outputChunkSchema?: TOutputChunk; path?: string }) {
+    websocket<TInputChunk extends z.ZodType = TEntity, TOutputChunk extends z.ZodType = TEntity>(options?: { inputChunkSchema?: TInputChunk; outputChunkSchema?: TOutputChunk; path?: HTTPPath }) {
         const inputChunkSchema = (options?.inputChunkSchema ?? this.entitySchema) as TInputChunk;
         const outputChunkSchema = (options?.outputChunkSchema ?? this.entitySchema) as TOutputChunk;
-        const wsPath = (options?.path ?? "/ws") as HTTPPath;
+        const wsPath = (options?.path ?? "/ws");
 
-        return this.createBuilder({
+        const builder = this.createBuilder({
             method: "GET",
             summary: `WebSocket ${this.entityName}s`,
             description: `Bidirectional streaming for ${this.entityName}s via EventIterator`,
         })
             .path(wsPath)
-            .input((i) => i.body.streamed(inputChunkSchema))
-            .output((b) => b.body.streamed(outputChunkSchema));
+            .input((i) => i.body.streamed(inputChunkSchema));
+        
+        // Type assertion needed: streamed outputs don't perfectly infer through output() overloads
+        return builder.output(b => b.body.streamed(outputChunkSchema));
     }
 
-    bidirectional<TInputChunk extends z.ZodType = TEntity, TOutputChunk extends z.ZodType = TEntity>(options?: { inputChunkSchema?: TInputChunk; outputChunkSchema?: TOutputChunk; path?: string }) {
+    bidirectional<TInputChunk extends z.ZodType = TEntity, TOutputChunk extends z.ZodType = TEntity>(options?: { inputChunkSchema?: TInputChunk; outputChunkSchema?: TOutputChunk; path?: HTTPPath }) {
         return this.websocket<TInputChunk, TOutputChunk>(options);
     }
 
-    streamFile<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: { idSchema?: TIdSch; idFieldName?: TIdFieldName; path?: string }) {
+    streamFile<TIdFieldName extends string = TIdField, TIdSch extends z.ZodType = TIdSchema>(options?: { idSchema?: TIdSch; idFieldName?: TIdFieldName; path?: HTTPPath }) {
         const idFieldName = (options?.idFieldName ?? this.idField) as TIdFieldName;
         const idSchema = (options?.idSchema ?? this.idSchema) as TIdSch;
         const pathSuffix = options?.path ?? "/stream";
@@ -1189,7 +1389,7 @@ export class ZodStandardOperations<
         })
             .input((b) =>
                 b
-                    .params((p) => p`/{${p(idFieldName, idSchema)}}${pathSuffix}`)
+                    .params((p) => p`/${p(idFieldName, idSchema)}${pathSuffix}`)
                     .query(
                         z.object({
                             range: z.string().optional(),
@@ -1247,7 +1447,7 @@ export class ZodStandardOperations<
             summary: `Clone ${this.entityName}`,
             description: `Create a duplicate of a ${this.entityName}`,
         })
-            .input((b) => b.params((p) => p`/{${p(idFieldName, idSchema)}}/clone`).body(bodySchema))
+            .input((b) => b.params((p) => p`/${p(idFieldName, idSchema)}/clone`).body(bodySchema))
             .output(this.entitySchema);
     }
 }
@@ -1284,8 +1484,8 @@ export function createZodListOptions<TSortFields extends readonly string[], TFil
     searchableFields?: readonly string[];
     defaultLimit?: number;
     maxLimit?: number;
-}): BaseListOperationOptions {
-    const result: BaseListOperationOptions = {};
+}): ZodListOperationOptions {
+    const result: ZodListOperationOptions = {};
 
     if (options.sortableFields && options.sortableFields.length > 0) {
         result.pagination = createPaginationConfigSchema({
@@ -1310,3 +1510,11 @@ export function createZodListOptions<TSortFields extends readonly string[], TFil
 
     return result;
 }
+
+// Namespace export for backward compatibility with tests
+export const standard = {
+    zod: zodStandard,
+};
+
+// Also export Standard Operations class with old name
+export { ZodStandardOperations as StandardOperations };

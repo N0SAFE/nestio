@@ -1,9 +1,10 @@
-import { z } from "zod/v4";
+import * as z from "zod";
+import { CONFIG_SYMBOL as STANDARD_CONFIG_SYMBOL } from "../standard/base/types";
 
 /**
  * Symbol to store config data on Zod schemas
  */
-export const CONFIG_SYMBOL = Symbol.for("orpc:config");
+export const CONFIG_SYMBOL: typeof STANDARD_CONFIG_SYMBOL = STANDARD_CONFIG_SYMBOL;
 
 /**
  * Type for Zod schema with attached config

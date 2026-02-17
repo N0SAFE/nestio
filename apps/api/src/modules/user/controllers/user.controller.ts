@@ -12,7 +12,7 @@ export class UserController {
     @Implement(userContract.list)
     list() {
         return implement(userContract.list).use(requireAuth()).handler(async ({ input }) => {
-            const result = await this.userService.getUsers(input);
+            const result = await this.userService.getUsers(input.query);
             return {
                 data: result.data.map((user) => ({
                     id: user.id,
@@ -31,7 +31,11 @@ export class UserController {
     @Implement(userContract.findById)
     findById() {
         return implement(userContract.findById).use(requireAuth()).handler(async ({ input }) => {
-            const user = await this.userService.findUserById(input.params.id);
+            const userId = input.params.id;
+            if (!userId) {
+                throw new Error("Missing user id parameter");
+            }
+            const user = await this.userService.findUserById(userId);
             if (!user) {
                 return null;
             }
@@ -46,12 +50,13 @@ export class UserController {
     @Implement(userContract.create)
     create() {
         return implement(userContract.create).use(requireAuth()).handler(async ({ input }) => {
-            const user = await this.userService.createUser(input.body);
+            const user = await this.userService.createUser(input);
             if (!user) {
                 throw new Error("Failed to create user");
             }
             return {
-                status: 201 as const,
+                status: 201,
+                headers: {},
                 body: {
                     id: user.id,
                     name: user.name,
@@ -68,7 +73,8 @@ export class UserController {
     @Implement(userContract.update)
     update() {
         return implement(userContract.update).use(requireAuth()).handler(async ({ input }) => {
-            const user = await this.userService.updateUser(input.params.id, input.body);
+            const { id, ...updateData } = input;
+            const user = await this.userService.updateUser(id, updateData);
             if (!user) {
                 throw new Error("User not found");
             }
@@ -87,7 +93,11 @@ export class UserController {
     @Implement(userContract.delete)
     delete() {
         return implement(userContract.delete).use(requireAuth()).handler(async ({ input }) => {
-            const user = await this.userService.deleteUser(input.params.id);
+            const userId = input.params.id;
+            if (!userId) {
+                throw new Error("Missing user id parameter");
+            }
+            const user = await this.userService.deleteUser(userId);
             if (!user) {
                 return { success: false, message: "User not found" };
             }
@@ -98,13 +108,14 @@ export class UserController {
     @Implement(userContract.checkEmail)
     checkEmail() {
         return implement(userContract.checkEmail).use(requireAuth()).handler(async ({ input }) => {
-            return await this.userService.checkUserExistsByEmail(input.body.email);
+            return await this.userService.checkUserExistsByEmail(input.email);
         });
     }
 
     @Implement(userContract.count)
     count() {
-        return implement(userContract.count).use(requireAuth()).handler(async () => {
+        return implement(userContract.count).handler(async ({ context }) => {
+            context.auth.requireAuth();
             return await this.userService.getUserCount();
         });
     }

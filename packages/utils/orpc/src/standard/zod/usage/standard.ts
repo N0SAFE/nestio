@@ -1761,7 +1761,7 @@ type _DebugUserWithErrorErrors = UserWithErrorErrors;
 // --------------------------------------------------------------------------
 type UserReadWithDescriptionsInput = InferContractRouterInputs<typeof userReadWithDescriptionsContract>;
 type UserReadWithDescriptionsOutput = InferContractRouterOutputs<typeof userReadWithDescriptionsContract>;
-
+    
 // Input should have params.id
 type UserReadWithDescriptionsInputHasId = AssertExtends<UserReadWithDescriptionsInput, { params: { id: string } }, "UserReadWithDescriptionsInput should have params.id">;
 const _checkUserReadWithDescriptionsInput: UserReadWithDescriptionsInputHasId = true;

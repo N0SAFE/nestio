@@ -19,36 +19,29 @@ jobs:
         name: 🔧 Setup & Install Dependencies
         runs-on: ubuntu-latest
         timeout-minutes: 10
-        outputs:
-            cache-hit: ${{ steps.cache-dependencies.outputs.cache-hit }}
         steps:
             - name: 📚 Checkout repository
               uses: actions/checkout@v4
 
-            - name: 💾 Cache Bun dependencies
-              id: cache-dependencies
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.bun
-                      node_modules
-                      apps/**/node_modules
-                      packages/**/node_modules
-                      bun.lock
-                  key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
-                  restore-keys: |
-                      bun-deps-${{ runner.os }}-
-
             - name: 🐰 Setup Bun
-              if: steps.cache-dependencies.outputs.cache-hit != 'true'
               uses: oven-sh/setup-bun@v2
               with:
                   bun-version: ${{ env.BUN_VERSION }}
 
             - name: 📦 Install dependencies
-              if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
-                bun install
+                bun install --frozen-lockfile
+
+            - name: 💾 Share dependencies for this CI run
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.bun/install/cache
+                      node_modules
+                      apps/**/node_modules
+                      packages/**/node_modules
+                      apps/doc/.source
+                  key: bun-deps-${{ github.run_id }}-${{ runner.os }}
 
     # Job 1: Generate Declarative Routes
     generate-declarative-routes:
@@ -81,24 +74,28 @@ jobs:
               with:
                   bun-version: ${{ env.BUN_VERSION }}
 
-            - name: 💾 Restore Bun dependencies cache
+            - name: 💾 Restore shared dependencies
+              id: restore-shared-deps
               if: steps.cache-declarative-routes.outputs.cache-hit != 'true'
               uses: actions/cache@v4
               with:
                   path: |
-                      ~/.bun
+                      ~/.bun/install/cache
                       node_modules
                       apps/**/node_modules
                       packages/**/node_modules
-                      bun.lock
-                  key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
-                  restore-keys: |
-                      bun-deps-${{ runner.os }}-
+                      apps/doc/.source
+                  key: bun-deps-${{ github.run_id }}-${{ runner.os }}
+
+            - name: 📦 Install dependencies (fallback)
+              if: steps.cache-declarative-routes.outputs.cache-hit != 'true' && steps.restore-shared-deps.outputs.cache-hit != 'true'
+              run: |
+                bun install --frozen-lockfile
 
             - name: 🛤️ Generate declarative routes
               if: steps.cache-declarative-routes.outputs.cache-hit != 'true'
               run: |
-                bun run @repo-bin/declarative-routing build
+                bun run @repo/cli-declarative-routing build
                 bun run web dr:build
 
             - name: 📝 Generate OpenAPI documentation
@@ -161,18 +158,22 @@ jobs:
               with:
                   bun-version: ${{ env.BUN_VERSION }}
 
-            - name: 💾 Restore Bun dependencies cache
+            - name: 💾 Restore shared dependencies
+              id: restore-shared-deps
               uses: actions/cache@v4
               with:
                   path: |
-                      ~/.bun
+                      ~/.bun/install/cache
                       node_modules
                       apps/**/node_modules
                       packages/**/node_modules
-                      bun.lock
-                  key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
-                  restore-keys: |
-                      bun-deps-${{ runner.os }}-
+                      apps/doc/.source
+                  key: bun-deps-${{ github.run_id }}-${{ runner.os }}
+
+            - name: 📦 Install dependencies (fallback)
+              if: steps.restore-shared-deps.outputs.cache-hit != 'true'
+              run: |
+                bun install --frozen-lockfile
 
             - name: � Restore declarative routes cache
               uses: actions/cache@v4
@@ -259,18 +260,22 @@ jobs:
               with:
                   bun-version: ${{ env.BUN_VERSION }}
 
-            - name: 💾 Restore Bun dependencies cache
+            - name: 💾 Restore shared dependencies
+              id: restore-shared-deps
               uses: actions/cache@v4
               with:
                   path: |
-                      ~/.bun
+                      ~/.bun/install/cache
                       node_modules
                       apps/**/node_modules
                       packages/**/node_modules
-                      bun.lock
-                  key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
-                  restore-keys: |
-                      bun-deps-${{ runner.os }}-
+                      apps/doc/.source
+                  key: bun-deps-${{ github.run_id }}-${{ runner.os }}
+
+            - name: 📦 Install dependencies (fallback)
+              if: steps.restore-shared-deps.outputs.cache-hit != 'true'
+              run: |
+                bun install --frozen-lockfile
 
             - name: 💾 Restore declarative routes cache
               uses: actions/cache@v4
@@ -359,18 +364,22 @@ jobs:
               with:
                   bun-version: ${{ env.BUN_VERSION }}
 
-            - name: 💾 Restore Bun dependencies cache
+            - name: 💾 Restore shared dependencies
+              id: restore-shared-deps
               uses: actions/cache@v4
               with:
                   path: |
-                      ~/.bun
+                      ~/.bun/install/cache
                       node_modules
                       apps/**/node_modules
                       packages/**/node_modules
-                      bun.lock
-                  key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock', '**/package.json') }}
-                  restore-keys: |
-                      bun-deps-${{ runner.os }}-
+                      apps/doc/.source
+                  key: bun-deps-${{ github.run_id }}-${{ runner.os }}
+
+            - name: 📦 Install dependencies (fallback)
+              if: steps.restore-shared-deps.outputs.cache-hit != 'true'
+              run: |
+                bun install --frozen-lockfile
 
             - name: 💾 Restore declarative routes cache
               uses: actions/cache@v4
@@ -406,8 +415,6 @@ jobs:
                   TEST_STATUS="${{ needs.test.result }}"
                   DR_STATUS="${{ needs.generate-declarative-routes.result }}"
 
-                  # Cache hit information
-                  BUN_CACHE_HIT="${{ needs.setup.outputs.cache-hit }}"
                   DR_CACHE_HIT="${{ needs.generate-declarative-routes.outputs.cache-hit }}"
 
                   echo "📋 Pipeline Results:"
@@ -419,7 +426,6 @@ jobs:
                   
                   echo ""
                   echo "🎯 Cache Performance:"
-                  echo "  - Bun Dependencies: $([ "$BUN_CACHE_HIT" = "true" ] && echo "✅ Cache HIT" || echo "❌ Cache MISS")"
                   echo "  - Declarative Routes: $([ "$DR_CACHE_HIT" = "true" ] && echo "✅ Cache HIT" || echo "❌ Cache MISS")"
 
                   if [ "$SETUP_STATUS" = "success" ] && [ "$LINT_STATUS" = "success" ] && [ "$BUILD_STATUS" = "success" ] && [ "$TEST_STATUS" = "success" ] && [ "$DR_STATUS" = "success" ]; then
@@ -438,8 +444,6 @@ jobs:
 
             - name: 📋 Generate deployment summary
               run: |
-                  # Cache hit information
-                  BUN_CACHE_HIT="${{ needs.setup.outputs.cache-hit }}"
                   DR_CACHE_HIT="${{ needs.generate-declarative-routes.outputs.cache-hit }}"
                   
                   echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
@@ -457,7 +461,6 @@ jobs:
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "| Cache Type | Status |" >> $GITHUB_STEP_SUMMARY
                   echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
-                  echo "| Bun Dependencies | $([ "$BUN_CACHE_HIT" = "true" ] && echo "✅ HIT" || echo "❌ MISS") |" >> $GITHUB_STEP_SUMMARY
                   echo "| Declarative Routes | $([ "$DR_CACHE_HIT" = "true" ] && echo "✅ HIT" || echo "❌ MISS") |" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
 

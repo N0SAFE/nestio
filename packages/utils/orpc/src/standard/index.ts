@@ -24,7 +24,6 @@
  * ```
  */
 
-import type { z } from "zod/v4";
 import { 
     ZodStandardOperations,
     zodStandard,
@@ -56,13 +55,7 @@ export const standard = {
      * });
      * ```
      */
-    zod<TEntity extends ZodEntitySchema, TIdField extends string = "id", TIdSchema extends z.ZodType = z.ZodType>(
-        entitySchema: TEntity,
-        entityName: string,
-        options?: Partial<Omit<ZodEntityOperationOptions<TEntity, TIdField, TIdSchema>, 'entitySchema' | 'entityName'>>
-    ): ZodStandardOperations<TEntity, TIdField, TIdSchema> {
-        return zodStandard(entitySchema, entityName, options);
-    },
+    zod: zodStandard,
 };
 
 // Re-export types and classes for direct usage
@@ -73,6 +66,9 @@ export {
     type ZodEntitySchema,
     type ZodEntityOperationOptions,
 };
+
+// Re-export list builder
+export { ListOperationBuilder, type BuilderFilterField } from "./zod/list-builder";
 
 // Re-export base types
 export {

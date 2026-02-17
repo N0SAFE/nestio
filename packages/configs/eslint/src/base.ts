@@ -73,6 +73,7 @@ export const testConfig = (options: BaseConfigOptions = {}) => {
                 "no-unused-vars": "off",
                 "@typescript-eslint/unbound-method": "off",
                 "@typescript-eslint/unified-signatures": "off",
+                "@typescript-eslint/no-deprecated": "off",
             },
         },
     ]);
@@ -87,7 +88,7 @@ export const allConfig = (options: BaseConfigOptions = {}) => {
 
 export default {
     meta: {
-        name: "@repo-configs/eslint",
+        name: "@repo/config-eslint",
         version: "0.0.0",
     },
     configs: {

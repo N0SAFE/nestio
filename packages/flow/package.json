@@ -42,10 +42,10 @@
     "zustand": "catalog:utils"
   },
   "devDependencies": {
-    "@repo-configs/eslint": "*",
+    "@repo/config-eslint": "*",
     "eslint": "catalog:linting",
-    "@repo-configs/typescript": "*",
-    "@repo-configs/vitest": "*",
+    "@repo/config-typescript": "*",
+    "@repo/config-vitest": "*",
     "@testing-library/react": "catalog:testing",
     "@types/node": "catalog:build",
     "@types/react": "catalog:react",

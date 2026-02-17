@@ -4,7 +4,8 @@
  * Uses Standard Schema instead of Zod
  */
 
-import { AsyncIteratorClass, eventIterator, Schema } from "@orpc/contract";
+import { AsyncIteratorClass, eventIterator } from "@orpc/contract";
+import type { Schema } from "@orpc/contract";
 import type { AnySchema, UnionTuple } from "./types";
 import type { SchemaShape, ObjectSchema, IsEmptyRecord, LiteralSchema, VoidSchema } from "./standard-schema-helpers";
 import { objectSchema, literalSchema, unionSchema } from "./standard-schema-helpers";
@@ -391,7 +392,7 @@ export class DetailedOutputBuilder<
      * ]))
      * ```
      */
-    union<const TBuilders extends readonly DetailedOutputBuilder<AnySchema, AnySchema, SchemaShape, number, string | undefined, string | undefined>[]>(
+    union<const TBuilders extends readonly DetailedOutputBuilder<AnySchema, AnySchema, SchemaShape, number, string | undefined, string | undefined, AnySchema>[]>(
         builders: TBuilders
     ): DetailedOutputUnionResult<TBuilders> {
         // Build all variants and combine into union
@@ -472,7 +473,7 @@ export class DetailedOutputBuilder<
  * ensuring correct overload resolution in RouteBuilder.output().
  */
 export type DetailedOutputUnionResult<
-    TBuilders extends readonly DetailedOutputBuilder<AnySchema, AnySchema, SchemaShape, number, string | undefined, string | undefined>[]
+    TBuilders extends readonly DetailedOutputBuilder<AnySchema, AnySchema, SchemaShape, number, string | undefined, string | undefined, AnySchema>[]
 > = {
     readonly __unionBuilders: TBuilders;
     _build(): AnySchema;
@@ -485,7 +486,7 @@ export type DetailedOutputUnionResult<
  * @internal
  */
 class DetailedOutputBuilderWithUnion<
-    TBuilders extends readonly DetailedOutputBuilder<AnySchema, AnySchema, SchemaShape, number, string | undefined, string | undefined>[]
+    TBuilders extends readonly DetailedOutputBuilder<AnySchema, AnySchema, SchemaShape, number, string | undefined, string | undefined, AnySchema>[]
 > implements DetailedOutputUnionResult<TBuilders> {
     readonly __unionBuilders: TBuilders;
     private _unionSchema: AnySchema;

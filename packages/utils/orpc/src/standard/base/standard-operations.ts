@@ -17,6 +17,7 @@
 import type { AnySchema } from "@orpc/contract";
 import { RouteBuilder } from "../../builder/route-builder";
 import type { EntitySchema, SchemaWithConfig } from "./types";
+import type { VoidSchema } from "../../builder/standard-schema-helpers";
 import type { UUIDSchema } from "./types";
 import type { FieldFilterConfig } from "./utils";
 
@@ -27,11 +28,7 @@ import type { FieldFilterConfig } from "./utils";
  * @typeParam TIdField - The ID field name literal (default: "id")
  * @typeParam TIdSchema - The ID schema type (default: UUIDSchema)
  */
-export type EntityOperationOptions<
-    TEntitySchema extends EntitySchema,
-    TIdField extends string = "id",
-    TIdSchema extends AnySchema = UUIDSchema,
-> = {
+export type EntityOperationOptions<TEntitySchema extends EntitySchema, TIdField extends string = "id", TIdSchema extends AnySchema = UUIDSchema> = {
     entitySchema: TEntitySchema;
     entityName: string;
     idField?: TIdField;
@@ -108,11 +105,7 @@ export type ListPlainOptions = {
  * }
  * ```
  */
-export abstract class StandardOperations<
-    TEntity extends EntitySchema = EntitySchema,
-    TIdField extends string = "id",
-    TIdSchema extends AnySchema = UUIDSchema,
-> {
+export abstract class StandardOperations<TEntity extends EntitySchema = EntitySchema, TIdField extends string = "id", TIdSchema extends AnySchema = UUIDSchema> {
     protected entitySchema: TEntity;
     protected entityName: string;
     protected idField: TIdField;
@@ -139,15 +132,14 @@ export abstract class StandardOperations<
      * Create a RouteBuilder with minimal initial configuration.
      * Shared across all implementations — RouteBuilder is library-agnostic.
      */
-    protected createBuilder(metadata: {
-        method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-        summary?: string;
-        description?: string;
-    }) {
-        return new RouteBuilder({
+    protected createBuilder<TMethod extends "GET" | "POST" | "PUT" | "PATCH" | "DELETE">(metadata: { method: TMethod; summary?: string; description?: string }): RouteBuilder<VoidSchema, VoidSchema, TMethod, TEntity> {
+        return new RouteBuilder<VoidSchema, VoidSchema, TMethod, TEntity, Record<string, never>>({
+            entitySchema: this.entitySchema,
             method: metadata.method,
-            summary: metadata.summary,
-            description: metadata.description,
+            metadata: {
+                summary: metadata.summary,
+                description: metadata.description,
+            },
         });
     }
 
@@ -196,10 +188,7 @@ export abstract class StandardOperations<
     abstract count(options?: { filtering?: SchemaWithConfig<unknown> }): unknown;
 
     /** Full-text search with pagination */
-    abstract search(options?: {
-        searchFields?: readonly string[];
-        pagination?: SchemaWithConfig<unknown> | { defaultLimit?: number; maxLimit?: number };
-    }): unknown;
+    abstract search(options?: { searchFields?: readonly string[]; pagination?: SchemaWithConfig<unknown> | { defaultLimit?: number; maxLimit?: number } }): unknown;
 
     /** Check if an entity exists with a given field value */
     abstract check(fieldName: string, fieldSchema?: AnySchema): unknown;
@@ -239,11 +228,7 @@ export abstract class StandardOperations<
     abstract distinct(fieldName: string): unknown;
 
     /** Aggregate operations (sum, avg, min, max, count) */
-    abstract aggregate(options?: {
-        functions?: Record<string, { op: "sum" | "avg" | "min" | "max" | "count"; field: string }>;
-        groupBy?: readonly string[];
-        path?: string;
-    }): unknown;
+    abstract aggregate(options?: { functions?: Record<string, { op: "sum" | "avg" | "min" | "max" | "count"; field: string }>; groupBy?: readonly string[]; path?: string }): unknown;
 
     /** Export entities in various formats */
     abstract export(options?: { formats?: readonly string[]; path?: string }): unknown;
@@ -263,13 +248,10 @@ export abstract class StandardOperations<
     abstract streamingRead(options?: { idSchema?: AnySchema; idFieldName?: string }): unknown;
 
     /** Streaming list with real-time updates (EventIterator output) */
-    abstract streamingList(options?: ListOperationOptions | ListPlainOptions & { path?: string }): unknown;
+    abstract streamingList(options?: ListOperationOptions | (ListPlainOptions & { path?: string })): unknown;
 
     /** Streaming search with real-time updates (EventIterator output) */
-    abstract streamingSearch(options?: {
-        searchFields?: readonly string[];
-        pagination?: SchemaWithConfig<unknown> | { defaultLimit?: number; maxLimit?: number };
-    }): unknown;
+    abstract streamingSearch(options?: { searchFields?: readonly string[]; pagination?: SchemaWithConfig<unknown> | { defaultLimit?: number; maxLimit?: number } }): unknown;
 
     /** Streamed input operation (EventIterator input, normal output) */
     abstract streamedInput(options?: { chunkSchema?: AnySchema; path?: string; outputSchema?: AnySchema }): unknown;
