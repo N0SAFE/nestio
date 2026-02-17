@@ -3,7 +3,7 @@ import { objectSchema } from "../../../common/storage";
 import { z } from "zod/v4";
 
 // Generate presigned download URL using standard read() for GET endpoint
-const objectOps = standard(objectSchema, "object");
+const objectOps = standard.zod(objectSchema, "object");
 
 export const objectPresignedGetUrlContract = objectOps
     .read()

@@ -39,7 +39,7 @@ export const _testNumber: TestNumber = false;
 // Test with actual contract
 // ============================================================================
 
-const userOps = standard(userSchema, 'user');
+const userOps = standard.zod(userSchema, 'user');
 
 // This returns never
 export const userBatchDeleteContract = userOps.batchDelete({ maxBatchSize: 100 }).build();

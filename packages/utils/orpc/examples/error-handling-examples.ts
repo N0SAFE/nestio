@@ -19,7 +19,7 @@ const userSchema = z.object({
 });
 
 // Create standard operations builder
-const userOps = standard(userSchema, 'user');
+const userOps = standard.zod(userSchema, 'user');
 
 /**
  * Example 1: Simple error definitions

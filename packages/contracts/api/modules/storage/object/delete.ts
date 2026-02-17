@@ -3,7 +3,7 @@ import { objectSchema } from '../../../common/storage';
 import { z } from 'zod/v4';
 
 // Delete object using standard delete() with composite key
-const objectOps = standard(objectSchema, 'object');
+const objectOps = standard.zod(objectSchema, 'object');
 
 export const objectDeleteContract = objectOps
   .delete()

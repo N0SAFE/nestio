@@ -62,9 +62,11 @@ export function FileUploadDialog({
 
       try {
         await upload.mutateAsync({
-          bucket,
-          file: currentFile.file,
-          objectName: path ? `${path.replace(/\/+$/, '')}/${currentFile.file.name}` : currentFile.file.name,
+          params: { bucket },
+          body: {
+            file: currentFile.file,
+            objectName: path ? `${path.replace(/\/+$/, '')}/${currentFile.file.name}` : currentFile.file.name,
+          },
         })
 
         // Update status to completed

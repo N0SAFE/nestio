@@ -25,7 +25,10 @@ export function CreateBucketDialog(): JSX.Element {
   const handleCreate = async () => {
     if (!bucketName.trim()) return
     
-    await createBucket.mutateAsync({ body: { name: bucketName.trim() } })
+    await createBucket.mutateAsync({
+      name: bucketName.trim(),
+      creationDate: new Date(),
+    })
     setBucketName('')
     setOpen(false)
   }

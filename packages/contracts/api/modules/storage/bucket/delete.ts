@@ -3,7 +3,7 @@ import { bucketSchema } from '../../../common/storage';
 import { z } from 'zod/v4';
 
 // Create standard operations builder for buckets
-const bucketOps = standard(bucketSchema, 'bucket');
+const bucketOps = standard.zod(bucketSchema, 'bucket');
 
 // Delete bucket contract - Using standard delete with custom name field
 export const bucketDeleteContract = bucketOps

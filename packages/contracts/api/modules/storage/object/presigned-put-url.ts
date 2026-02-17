@@ -3,7 +3,7 @@ import { objectSchema } from "../../../common/storage";
 import { z } from "zod/v4";
 
 // Generate presigned upload URL using standard update() for PUT endpoint
-const objectOps = standard(objectSchema, "object");
+const objectOps = standard.zod(objectSchema, "object");
 
 export const objectPresignedPutUrlContract = objectOps
     .update()

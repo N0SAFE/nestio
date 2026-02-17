@@ -3,7 +3,7 @@ import { objectSchema } from "../../../common/storage";
 import { z } from "zod/v4";
 
 // Copy object using standard create() for POST destination
-const objectOps = standard(objectSchema, "object");
+const objectOps = standard.zod(objectSchema, "object");
 
 export const objectCopyContract = objectOps
     .create()

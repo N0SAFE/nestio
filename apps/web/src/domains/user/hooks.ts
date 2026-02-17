@@ -41,7 +41,7 @@ export function useUser(userId: string) {
  */
 export function useCheckEmail(email: string, options?: { enabled?: boolean }) {
   return useQuery(
-    userEndpoints.checkEmail.queryOptions({ input: { body: { email } }, enabled: options?.enabled ?? !!email }),
+    userEndpoints.checkEmail.queryOptions({ input: { email }, enabled: options?.enabled ?? !!email }),
   );
 }
 

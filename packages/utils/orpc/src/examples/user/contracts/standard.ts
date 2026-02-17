@@ -26,7 +26,7 @@ import { s } from "../../../standard/base/schema";
  * Create a standard operations builder for the User entity.
  * This provides factory methods for common CRUD operations.
  */
-const userOps = standard(userSchema, "user");
+const userOps = standard.zod(userSchema, "user");
 
 // ============================================================================
 // CORE CRUD CONTRACTS (Basic Usage)

@@ -3,7 +3,7 @@ import { bucketSchema } from '../../../common/storage';
 import { z } from 'zod/v4';
 
 // Create standard operations builder for buckets
-const bucketOps = standard(bucketSchema, 'bucket');
+const bucketOps = standard.zod(bucketSchema, 'bucket');
 
 // Check if bucket exists by name using standard exists()
 export const bucketExistsContract = bucketOps

@@ -15,7 +15,7 @@ export const apiKeyListConfigSchemas = defineQueryConfig({
 });
 
 // Create standard operations builder for API keys
-const apiKeyOps = standard(apiKeySchema, 'api-key');
+const apiKeyOps = standard.zod(apiKeySchema, 'api-key');
 
 // List API keys with pagination and optional filtering
 export const apiKeyListContract = apiKeyOps

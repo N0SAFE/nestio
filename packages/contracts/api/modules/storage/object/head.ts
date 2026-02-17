@@ -3,7 +3,7 @@ import { objectSchema } from "../../../common/storage";
 import { z } from "zod/v4";
 
 // HEAD object metadata - Check if object exists without downloading body using standard read()
-const objectOps = standard(objectSchema, "object");
+const objectOps = standard.zod(objectSchema, "object");
 
 export const objectHeadContract = objectOps
     .read()

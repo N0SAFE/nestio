@@ -754,7 +754,7 @@ For resources with composite keys (e.g., S3 objects with bucket + objectName):
 
 ```typescript
 // Object operations use composite params
-const objectOps = standard(objectSchema, 'object');
+const objectOps = standard.zod(objectSchema, 'object');
 
 objectOps.read({ 
   path: '/:bucket/objects/*objectName/stat' 
@@ -1120,7 +1120,7 @@ const listUsersInOrg = userOps.list()
 ### Example 4: Composite Key Operations
 
 ```typescript
-const objectOps = standard(objectSchema, 'object');
+const objectOps = standard.zod(objectSchema, 'object');
 
 const getObjectMetadata = objectOps.read({ 
   path: '/:bucket/objects/*objectName/stat' 

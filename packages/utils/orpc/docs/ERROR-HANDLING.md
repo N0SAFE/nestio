@@ -285,7 +285,7 @@ ORPC provides default HTTP status mappings for common errors:
 The key is to define ALL statuses in output first, then error codes separately:
 
 ```typescript
-const userOps = standard(userSchema, 'user');
+const userOps = standard.zod(userSchema, 'user');
 
 // Read - Success or Not Found
 export const userRead = userOps

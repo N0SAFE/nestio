@@ -27,7 +27,11 @@ const enhancedStorage = wrapWithInvalidations(storageEndpoints, storageInvalidat
  * const { data: buckets, isLoading } = useBuckets()
  */
 export function useBuckets() {
-  return useQuery(storageEndpoints.bucketList.queryOptions({ input: {} }));
+  return useQuery(
+    storageEndpoints.bucketList.queryOptions({
+      input: { params: {}, query: { offset: 0 }, body: {}, headers: {} },
+    }),
+  );
 }
 
 /**
@@ -39,7 +43,7 @@ export function useBuckets() {
 export function useBucketExists(bucketName: string, options?: { enabled?: boolean }) {
   return useQuery(
     storageEndpoints.bucketExists.queryOptions({ 
-      input: { params: { name: bucketName } },
+      input: bucketName,
       enabled: options?.enabled ?? !!bucketName,
     }),
   );
@@ -63,9 +67,13 @@ export function useObjects(
   return useQuery(
     storageEndpoints.objectList.queryOptions({
       input: {
-        bucket,
-        prefix: prefix ?? '',
-        maxKeys: options?.maxKeys ?? 1000,
+        params: { bucket },
+        query: {
+          prefix: prefix ?? '',
+          maxKeys: options?.maxKeys ?? 1000,
+        },
+        body: {},
+        headers: {},
       },
       enabled: options?.enabled ?? !!bucket,
     }),
@@ -85,7 +93,7 @@ export function useObjectStat(
 ) {
   return useQuery(
     storageEndpoints.objectStat.queryOptions({
-      input: { bucket, objectName },
+      input: { params: { id: objectName, bucket, objectName } },
       enabled: options?.enabled ?? (!!bucket && !!objectName),
     }),
   );
@@ -107,7 +115,7 @@ export function useCreateBucket() {
   return useMutation(
     storageEndpoints.bucketCreate.mutationOptions({
       onSuccess: enhancedStorage.bucketCreate.withInvalidationOnSuccess((data, variables) => {
-        toast.success(`Bucket "${variables.body.name}" created successfully`);
+        toast.success(`Bucket "${variables.name}" created successfully`);
       }),
       onError: (error: Error) => {
         toast.error(`Failed to create bucket: ${error.message}`);
@@ -162,10 +170,10 @@ export function useFileUpload() {
   return useMutation(
     storageEndpoints.objectUpload.mutationOptions({
       onSuccess: enhancedStorage.objectUpload.withInvalidationOnSuccess((data, variables) => {
-        toast.success(`File "${variables.file.name}" uploaded successfully`);
+        toast.success(`File "${variables.body.file.name}" uploaded successfully`);
       }),
       onError: (error: Error, variables) => {
-        toast.error(`Failed to upload "${variables.file.name}": ${error.message}`);
+        toast.error(`Failed to upload "${variables.body.file.name}": ${error.message}`);
       },
     }),
   );
@@ -183,7 +191,7 @@ export function useDeleteObject() {
   return useMutation(
     storageEndpoints.objectDelete.mutationOptions({
       onSuccess: enhancedStorage.objectDelete.withInvalidationOnSuccess((data, variables) => {
-        toast.success(`Object "${variables.objectName}" deleted successfully`);
+        toast.success(`Object "${variables.params.objectName}" deleted successfully`);
       }),
       onError: (error: Error) => {
         toast.error(`Failed to delete object: ${error.message}`);

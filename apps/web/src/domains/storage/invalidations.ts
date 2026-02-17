@@ -40,7 +40,7 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
    */
   bucketDelete: ({ input, keys }) => [
     keys.bucketList(),
-    keys.bucketExists({ input: { params: { name: input.params.name } } }),
+    keys.bucketExists({ input: input.params.name }),
   ],
   
   // =============================================================================
@@ -54,18 +54,29 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
    */
   objectUpload: ({ input, keys }) => [
     // Invalidate all object lists for this bucket
-    keys.objectList({ input: { bucket: input.bucket } }),
+    keys.objectList({
+      input: {
+        params: { bucket: input.params.bucket },
+        query: {},
+        body: {},
+        headers: {},
+      },
+    }),
     // Also invalidate with the specific prefix if it exists
-    ...(input.objectName.includes('/')
+    ...(input.body.objectName.includes('/')
       ? [keys.objectList({ 
           input: { 
-            bucket: input.bucket, 
-            prefix: input.objectName.substring(0, input.objectName.lastIndexOf('/') + 1)
+            params: { bucket: input.params.bucket },
+            query: {
+              prefix: input.body.objectName.substring(0, input.body.objectName.lastIndexOf('/') + 1),
+            },
+            body: {},
+            headers: {},
           } 
         })]
       : []),
     // Invalidate stat for this specific object
-    keys.objectStat({ input: { bucket: input.bucket, objectName: input.objectName } }),
+    keys.objectStat({ input: { params: { id: input.body.objectName, bucket: input.params.bucket, objectName: input.body.objectName } } }),
   ],
   
   /**
@@ -75,17 +86,28 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
    */
   objectDelete: ({ input, keys }) => [
     // Invalidate all object lists for this bucket
-    keys.objectList({ input: { bucket: input.bucket } }),
+    keys.objectList({
+      input: {
+        params: { bucket: input.params.bucket },
+        query: {},
+        body: {},
+        headers: {},
+      },
+    }),
     // Also invalidate with the specific prefix if it exists
-    ...(input.objectName.includes('/')
+    ...(input.params.objectName.includes('/')
       ? [keys.objectList({ 
           input: { 
-            bucket: input.bucket, 
-            prefix: input.objectName.substring(0, input.objectName.lastIndexOf('/') + 1)
+            params: { bucket: input.params.bucket },
+            query: {
+              prefix: input.params.objectName.substring(0, input.params.objectName.lastIndexOf('/') + 1),
+            },
+            body: {},
+            headers: {},
           } 
         })]
       : []),
     // Invalidate stat for this specific object
-    keys.objectStat({ input: { bucket: input.bucket, objectName: input.objectName } }),
+    keys.objectStat({ input: { params: { id: input.params.objectName, bucket: input.params.bucket, objectName: input.params.objectName } } }),
   ],
 });

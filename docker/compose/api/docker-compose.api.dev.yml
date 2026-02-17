@@ -167,6 +167,7 @@ services:
       - STORAGE_ROOT_PATH=/app/storage/buckets
       - STORAGE_MAX_FILE_SIZE=5368709120
       - STORAGE_MULTIPART_THRESHOLD=104857600
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:-dev-storage-secret-key-32-chars-min}
 
       # Enable seeding for mock data (development mode)
       - ENABLE_SEEDING=true

@@ -16,7 +16,7 @@ const userSchema = z.object({
 });
 
 describe('StandardOperations - Type Inference', () => {
-  const userOps = standard(userSchema, 'user');
+  const userOps = standard.zod(userSchema, 'user');
 
   describe('read()', () => {
     it('should infer correct input and output types', () => {

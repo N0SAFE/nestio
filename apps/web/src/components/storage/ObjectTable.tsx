@@ -57,9 +57,14 @@ export function ObjectTable({ bucket, objects, onNavigate }: ObjectTableProps): 
   const handleDownload = async (objectKey: string, objectName: string) => {
     try {
       const result = await getPresignedUrl.mutateAsync({
-        bucket,
-        objectName: objectKey,
-        expirySeconds: 3600,
+        params: {
+          id: objectKey,
+          bucket,
+          objectName: objectKey,
+        },
+        query: {
+          expirySeconds: 3600,
+        },
       })
 
       // Open download link
@@ -77,7 +82,13 @@ export function ObjectTable({ bucket, objects, onNavigate }: ObjectTableProps): 
   const handleDelete = async (objectKey: string) => {
     if (!confirm(`Are you sure you want to delete "${objectKey}"?`)) return
     
-    await deleteObject.mutateAsync({ bucket, objectName: objectKey })
+    await deleteObject.mutateAsync({
+      params: {
+        id: objectKey,
+        bucket,
+        objectName: objectKey,
+      },
+    })
   }
 
   if (objects.length === 0) {

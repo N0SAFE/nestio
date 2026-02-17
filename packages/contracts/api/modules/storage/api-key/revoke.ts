@@ -3,7 +3,7 @@ import { standard } from '@repo/orpc-utils';
 import { apiKeySchema } from '../../../common/storage';
 
 // Create standard operations builder for API keys
-const apiKeyOps = standard(apiKeySchema, 'api-key');
+const apiKeyOps = standard.zod(apiKeySchema, 'api-key');
 
 /**
  * Revoke API key contract
