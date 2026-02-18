@@ -72,8 +72,6 @@ export function useObjects(
           prefix: prefix ?? '',
           maxKeys: options?.maxKeys ?? 1000,
         },
-        body: {},
-        headers: {},
       },
       enabled: options?.enabled ?? !!bucket,
     }),

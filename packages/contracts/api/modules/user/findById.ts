@@ -7,7 +7,7 @@ const userOps = standard.zod(userSchema, "user");
 // Create read contract using builder
 export const userFindByIdContract = userOps
   .read()
-  .output(b => b.entitySchema.nullable())
+  .output(b => b.schema.nullable())
   .build()
   
 // type i = typeof userFindByIdContract['~orpc']["inputSchema"];

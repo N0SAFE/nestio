@@ -10,12 +10,10 @@ export const objectBatchDeleteContract = objectOps
     .input((b) =>
         b
             .params((p) => p`/${p("bucket", z.string().min(1))}/objects/batch-delete`)
-            .body((b) =>
-                b.schema(() =>
-                    z.object({
-                        objects: z.array(z.string().min(1)).min(1).max(1000),
-                    }),
-                ),
+            .body(
+                z.object({
+                    objects: z.array(z.string().min(1)).min(1).max(1000),
+                }),
             ),
     )
     .output(

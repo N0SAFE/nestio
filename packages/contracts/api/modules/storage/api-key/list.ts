@@ -1,24 +1,28 @@
 import { z } from 'zod/v4';
-import { standard } from '@repo/orpc-utils';
+import { createFilterConfig, standard } from '@repo/orpc-utils';
 import { apiKeySchema } from '../../../common/storage';
 
 // Create standard operations builder for API keys
 const apiKeyOps = standard.zod(apiKeySchema, 'api-key');
 
-// List API keys with pagination and optional filtering
-export const apiKeyListContract = apiKeyOps
-  .list({
-    pagination: {
-      defaultLimit: 20,
-      maxLimit: 100,
-      includeOffset: true,
-    },
-  })
-  .input(b => {
-    return b.extend({
-      tags: b.entitySchema.shape.tags.optional(),
-      bucketId: z.string().optional(),
-      includeRevoked: z.boolean().default(false),
-    });
-  })
-  .build();
+// Build reusable list config with pagination and filtering
+const apiKeyListConfig = createFilterConfig(apiKeyOps)
+    .withPagination({
+        defaultLimit: 20,
+        maxLimit: 100,
+        includeOffset: true,
+    })
+    .withFiltering({
+        tags: apiKeySchema.shape.tags,
+        bucketId: {
+            schema: z.string(),
+            operators: ['eq'] as const,
+        },
+        includeRevoked: {
+            schema: z.boolean(),
+            operators: ['eq'] as const,
+        },
+    })
+    .buildConfig();
+
+export const apiKeyListContract = apiKeyOps.list(apiKeyListConfig).build();

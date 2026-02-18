@@ -10,16 +10,14 @@ export const objectCopyContract = objectOps
     .input((b) =>
         b
             .params((p) => p`/${p("destinationBucket", z.string().min(1))}/objects/${p("destinationKey", z.string().min(1))}/copy`)
-            .body((b) =>
-                b.schema(() =>
-                    z.object({
-                        sourceBucket: z.string().min(1),
-                        sourceKey: z.string().min(1),
-                        metadataDirective: z.enum(["COPY", "REPLACE"]).optional().default("COPY"),
-                        contentType: z.string().optional(),
-                        metadata: z.record(z.string(), z.string()).optional(),
-                    }),
-                ),
+            .body(
+                z.object({
+                    sourceBucket: z.string().min(1),
+                    sourceKey: z.string().min(1),
+                    metadataDirective: z.enum(["COPY", "REPLACE"]).optional().default("COPY"),
+                    contentType: z.string().optional(),
+                    metadata: z.record(z.string(), z.string()).optional(),
+                }),
             ),
     )
     .output(

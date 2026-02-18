@@ -91,7 +91,7 @@ export const storageInvalidations = defineInvalidations(storageEndpoints, {
     // Also invalidate with the specific prefix if it exists
     ...(input.params.objectName.includes('/')
       ? [keys.objectList({ 
-          input: { 
+          input: {
             params: { bucket: input.params.bucket },
             query: {
               prefix: input.params.objectName.substring(0, input.params.objectName.lastIndexOf('/') + 1),

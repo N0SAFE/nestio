@@ -10,17 +10,15 @@ export const objectHeadContract = objectOps
     .input((b) =>
         b
             .params((p) => p`/${p("bucket", z.string().min(1))}/objects/${p("objectName", z.string().min(1))}`)
-            .headers((h) =>
-                h.schema(() =>
-                    z
-                        .object({
-                            "if-match": z.string().optional(),
-                            "if-none-match": z.string().optional(),
-                            "if-modified-since": z.string().optional(),
-                            "if-unmodified-since": z.string().optional(),
-                        })
-                        .optional(),
-                ),
+            .headers(
+                z
+                    .object({
+                        "if-match": z.string().optional(),
+                        "if-none-match": z.string().optional(),
+                        "if-modified-since": z.string().optional(),
+                        "if-unmodified-since": z.string().optional(),
+                    })
+                    .optional(),
             ),
     )
     .output(

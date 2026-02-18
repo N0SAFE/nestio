@@ -10,12 +10,10 @@ export const objectPresignedGetUrlContract = objectOps
     .input((b) =>
         b
             .params((p) => p`/${p("bucket", z.string().min(3).max(63))}/objects/${p("objectName", z.string().min(1))}/presigned-url`)
-            .query((q) =>
-                q.schema(() =>
-                    z.object({
-                        expirySeconds: z.number().int().min(1).max(604800).optional().default(3600),
-                    }),
-                ),
+            .query(
+                z.object({
+                    expirySeconds: z.number().int().min(1).max(604800).optional().default(3600),
+                }),
             ),
     )
     .output(

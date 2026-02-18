@@ -10,13 +10,11 @@ export const objectUploadContract = objectOps
     .input((b) =>
         b
             .params((p) => p`/${p("bucket", z.string())}/objects/upload`)
-            .body((b) =>
-                b.schema(() =>
-                    z.object({
-                        objectName: z.string().describe("Object key/name"),
-                        file: z.file().describe("File to upload"),
-                    }),
-                ),
+            .body(
+                z.object({
+                    objectName: z.string().describe("Object key/name"),
+                    file: z.file().describe("File to upload"),
+                }),
             ),
     )
     .output(
