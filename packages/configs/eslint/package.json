@@ -50,7 +50,7 @@
         "@vercel/style-guide": "^6.0.0",
         "babel-plugin-macros": "^3.1.0",
         "chokidar": "catalog:build",
-        "eslint": "^9.38.0",
+        "eslint": "^10.1.0",
         "eslint-config-nestjs": "^0.8.0",
         "eslint-config-next": "catalog:next",
         "eslint-config-prettier": "^10.1.8",
